@@ -1,7 +1,15 @@
 "use client";
 
 import { useState } from "react";
-import { Download, ChevronRight, Calendar, Building2, X, FileText, CreditCard, Receipt } from "lucide-react";
+import {
+  Download,
+  ChevronRight,
+  Calendar,
+  X,
+  FileText,
+  CreditCard,
+  Receipt,
+} from "lucide-react";
 import { AppShell } from "@/components/layout/app-shell";
 import {
   Card,
@@ -46,7 +54,7 @@ const fMoney = (n: number) =>
     maximumFractionDigits: 2,
   })}`;
 
-// Helper function to format date as "08 - 14 Dec'25"
+/* Helpers for formatting */
 const formatPayoutCycle = (startDate: string, endDate: string) => {
   const start = new Date(startDate);
   const end = new Date(endDate);
@@ -57,7 +65,6 @@ const formatPayoutCycle = (startDate: string, endDate: string) => {
   return `${startDay} - ${endDay} ${month}'${year}`;
 };
 
-// Helper function to format date as "10 Dec'25"
 const formatPayoutDate = (date: string) => {
   const d = new Date(date);
   const day = d.getDate();
@@ -66,7 +73,6 @@ const formatPayoutDate = (date: string) => {
   return `${day} ${month}'${year}`;
 };
 
-// Helper function to format date as "17 Dec'25, by 9PM"
 const formatPayoutDateWithTime = (date: string) => {
   const d = new Date(date);
   const day = d.getDate();
@@ -75,7 +81,7 @@ const formatPayoutDateWithTime = (date: string) => {
   return `${day} ${month}'${year}, by 9PM`;
 };
 
-/* ------------------ Payout Section ------------------ */
+/* ------------------ Payout UI ------------------ */
 
 function PayoutCycleCard({ payout }: { payout: Payout }) {
   return (
@@ -83,29 +89,43 @@ function PayoutCycleCard({ payout }: { payout: Payout }) {
       <CardContent className="p-5">
         <div className="space-y-4">
           <div>
-            <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Payout Cycle</p>
+            <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">
+              Payout Cycle
+            </p>
             <p className="text-lg font-semibold text-gray-900">
               {formatPayoutCycle(payout.periodStart, payout.periodEnd)}
             </p>
           </div>
-          
+
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Payout Date</p>
+              <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">
+                Payout Date
+              </p>
               <p className="text-sm font-semibold text-gray-900">
-                {formatPayoutDateWithTime(payout.payoutDate)}
+                {payout.payoutDate
+                  ? formatPayoutDateWithTime(payout.payoutDate)
+                  : "TBD"}
               </p>
             </div>
-            
+
             <div>
-              <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Orders</p>
-              <p className="text-sm font-semibold text-gray-900">{payout.ordersCount}</p>
+              <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">
+                Orders
+              </p>
+              <p className="text-sm font-semibold text-gray-900">
+                {payout.ordersCount}
+              </p>
             </div>
           </div>
-          
+
           <div className="pt-2">
-            <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Net Payout</p>
-            <p className="text-2xl font-bold text-gray-900">{fMoney(payout.netPayout)}</p>
+            <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">
+              Net Payout
+            </p>
+            <p className="text-2xl font-bold text-gray-900">
+              {fMoney(payout.netPayout)}
+            </p>
           </div>
         </div>
       </CardContent>
@@ -113,15 +133,15 @@ function PayoutCycleCard({ payout }: { payout: Payout }) {
   );
 }
 
-/* ------------------ Invoice Section ------------------ */
+/* ------------------ Invoice Download Card ------------------ */
 
-function InvoiceDownloadCard({ 
-  title, 
-  description, 
-  icon: Icon 
-}: { 
-  title: string; 
-  description: string; 
+function InvoiceDownloadCard({
+  title,
+  description,
+  icon: Icon,
+}: {
+  title: string;
+  description: string;
   icon: any;
 }) {
   return (
@@ -144,26 +164,21 @@ function InvoiceDownloadCard({
   );
 }
 
-/* ------------------ MAIN PAGE ------------------ */
+/* ------------------ Main Page ------------------ */
 
 export default function FinancePage() {
   const [selectedPayout, setSelectedPayout] = useState<Payout | null>(null);
   const [payoutSheetOpen, setPayoutSheetOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("payouts");
 
-  // Get current payout (first one in the list)
   const currentPayout = seedPayouts[0];
-  
-  // Get past payouts (rest of the list)
   const pastPayouts = seedPayouts.slice(1);
 
-  // Group invoices by year
+  // group invoices by year
   const invoicesByYear: Record<number, Invoice[]> = {};
-  seedInvoices.forEach(invoice => {
+  seedInvoices.forEach((invoice) => {
     const year = invoice.year;
-    if (!invoicesByYear[year]) {
-      invoicesByYear[year] = [];
-    }
+    if (!invoicesByYear[year]) invoicesByYear[year] = [];
     invoicesByYear[year].push(invoice);
   });
 
@@ -194,15 +209,15 @@ export default function FinancePage() {
             </TabsTrigger>
           </TabsList>
 
-          {/* Payouts Tab */}
+          {/* Payouts */}
           <TabsContent value="payouts" className="space-y-6">
-            {/* Current Payout Cycle */}
             <div>
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">Current Cycle</h2>
-              <PayoutCycleCard payout={currentPayout} />
+              <h2 className="text-lg font-semibold text-gray-900 mb-4">
+                Current Cycle
+              </h2>
+              {currentPayout && <PayoutCycleCard payout={currentPayout} />}
             </div>
 
-            {/* Past Cycles */}
             <div>
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-lg font-semibold text-gray-900">Past Cycles</h2>
@@ -216,13 +231,27 @@ export default function FinancePage() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="text-xs font-medium text-gray-500 uppercase tracking-wide">Payout Cycle</TableHead>
-                      <TableHead className="text-xs font-medium text-gray-500 uppercase tracking-wide">Payout Date</TableHead>
-                      <TableHead className="text-xs font-medium text-gray-500 uppercase tracking-wide">Status</TableHead>
-                      <TableHead className="text-xs font-medium text-gray-500 uppercase tracking-wide">Orders</TableHead>
-                      <TableHead className="text-xs font-medium text-gray-500 uppercase tracking-wide">Payout</TableHead>
-                      <TableHead className="text-xs font-medium text-gray-500 uppercase tracking-wide">UTR</TableHead>
-                      <TableHead className="text-xs font-medium text-gray-500 uppercase tracking-wide">Actions</TableHead>
+                      <TableHead className="text-xs font-medium text-gray-500 uppercase tracking-wide">
+                        Payout Cycle
+                      </TableHead>
+                      <TableHead className="text-xs font-medium text-gray-500 uppercase tracking-wide">
+                        Payout Date
+                      </TableHead>
+                      <TableHead className="text-xs font-medium text-gray-500 uppercase tracking-wide">
+                        Status
+                      </TableHead>
+                      <TableHead className="text-xs font-medium text-gray-500 uppercase tracking-wide">
+                        Orders
+                      </TableHead>
+                      <TableHead className="text-xs font-medium text-gray-500 uppercase tracking-wide">
+                        Payout
+                      </TableHead>
+                      <TableHead className="text-xs font-medium text-gray-500 uppercase tracking-wide">
+                        UTR
+                      </TableHead>
+                      <TableHead className="text-xs font-medium text-gray-500 uppercase tracking-wide">
+                        Actions
+                      </TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -231,25 +260,40 @@ export default function FinancePage() {
                         <TableCell className="font-medium text-gray-900">
                           {formatPayoutCycle(payout.periodStart, payout.periodEnd)}
                         </TableCell>
+
                         <TableCell className="text-gray-600">
-                          {formatPayoutDate(payout.payoutDate)}
+                          {payout.payoutDate
+                            ? formatPayoutDateWithTime(payout.payoutDate)
+                            : "N/A"}
                         </TableCell>
+
                         <TableCell>
-                          <Badge className={`rounded-full px-2 py-0.5 ${
-                            payout.status === "PAID"
-                              ? "bg-emerald-50 text-emerald-700"
-                              : payout.status === "TO BE PAID"
-                              ? "bg-amber-50 text-amber-700"
-                              : "bg-gray-50 text-gray-700"
-                          }`}>
+                          <Badge
+                            className={`rounded-full px-2 py-0.5 ${
+                              payout.status === "PAID"
+                                ? "bg-emerald-50 text-emerald-700"
+                                : payout.status === "PENDING"
+                                ? "bg-amber-50 text-amber-700"
+                                : "bg-gray-50 text-gray-700"
+                            }`}
+                          >
                             {payout.status}
                           </Badge>
                         </TableCell>
-                        <TableCell className="text-gray-600">{payout.ordersCount}</TableCell>
-                        <TableCell className="font-semibold text-gray-900">{fMoney(payout.netPayout)}</TableCell>
-                        <TableCell className="text-gray-600 font-mono text-xs">
-                          {payout.utr || "-"}
+
+                        <TableCell className="text-gray-600">
+                          {payout.ordersCount}
                         </TableCell>
+
+                        <TableCell className="font-semibold text-gray-900">
+                          {fMoney(payout.netPayout)}
+                        </TableCell>
+
+                        <TableCell className="text-gray-600 font-mono text-xs">
+                          {/* utr may be optional */}
+                          {(payout as any).utr || "-"}
+                        </TableCell>
+
                         <TableCell>
                           <div className="flex items-center gap-1">
                             <Button
@@ -264,15 +308,11 @@ export default function FinancePage() {
                               variant="ghost"
                               size="sm"
                               className="h-8 w-8"
-                              disabled={!payout.utr}
+                              disabled={!(payout as any).utr}
                             >
                               <Download className="h-4 w-4" />
                             </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-8 w-8"
-                            >
+                            <Button variant="ghost" size="sm" className="h-8 w-8">
                               <ChevronRight className="h-4 w-4" />
                             </Button>
                           </div>
@@ -285,9 +325,8 @@ export default function FinancePage() {
             </div>
           </TabsContent>
 
-          {/* Invoices & Taxes Tab */}
+          {/* Invoices */}
           <TabsContent value="invoices" className="space-y-6">
-            {/* Download Invoices Section */}
             <div>
               <h2 className="text-lg font-semibold text-gray-900 mb-4">Download Invoices</h2>
               <div className="grid gap-4 md:grid-cols-3">
@@ -309,7 +348,6 @@ export default function FinancePage() {
               </div>
             </div>
 
-            {/* Financial Year Section */}
             <div>
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-lg font-semibold text-gray-900">Financial year: 2025</h2>
@@ -330,20 +368,17 @@ export default function FinancePage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {invoicesByYear[2025]?.map((invoice) => (
+                    {(invoicesByYear[2025] || []).map((invoice) => (
                       <TableRow key={invoice.id} className="hover:bg-gray-50">
                         <TableCell className="font-medium text-gray-900">
                           {invoice.month}, {invoice.year}
                         </TableCell>
                         <TableCell className="text-gray-600 font-mono text-sm">
-                          {invoice.invoiceNumber || "226-11-00-129990"}
+                          {/* invoiceNumber optional in data */}
+                          {(invoice as any).invoiceNumber || "226-11-00-129990"}
                         </TableCell>
                         <TableCell>
-                          <Badge className={`rounded-full px-2 py-0.5 ${
-                            invoice.status === "Generated"
-                              ? "bg-emerald-50 text-emerald-700"
-                              : "bg-gray-50 text-gray-700"
-                          }`}>
+                          <Badge className={`rounded-full px-2 py-0.5 ${invoice.status === "Generated" ? "bg-emerald-50 text-emerald-700" : "bg-gray-50 text-gray-700"}`}>
                             {invoice.status}
                           </Badge>
                         </TableCell>
@@ -365,7 +400,6 @@ export default function FinancePage() {
               </Card>
             </div>
 
-            {/* Download Tax Receipts Section */}
             <div>
               <h2 className="text-lg font-semibold text-gray-900 mb-4">Download Tax Receipts</h2>
               <Card className="rounded-2xl border border-gray-100 bg-white shadow-[0_2px_8px_rgba(0,0,0,0.05)]">
@@ -386,15 +420,12 @@ export default function FinancePage() {
         {/* Payout Breakdown Sheet */}
         <Sheet open={payoutSheetOpen} onOpenChange={setPayoutSheetOpen}>
           <SheetContent side="right" className="max-w-lg w-full p-0 flex flex-col">
-            {/* Sticky Top Header */}
             <div className="sticky top-0 z-20 bg-white border-b p-5 flex justify-between items-center">
               <div>
                 <SheetTitle>Payout breakdown</SheetTitle>
                 <SheetDescription>
                   {selectedPayout
-                    ? `${fDate(selectedPayout.periodStart)} – ${fDate(
-                        selectedPayout.periodEnd
-                      )} • ${selectedPayout.ordersCount} orders`
+                    ? `${fDate(selectedPayout.periodStart)} – ${fDate(selectedPayout.periodEnd)} • ${selectedPayout.ordersCount} orders`
                     : ""}
                 </SheetDescription>
               </div>
@@ -403,32 +434,27 @@ export default function FinancePage() {
               </Button>
             </div>
 
-            {/* Scrollable Body */}
             <div className="overflow-y-auto p-5 space-y-5">
-              {/* Summary */}
-              {selectedPayout && (
-                <Card className="rounded-xl border bg-white shadow-sm">
-                  <CardContent className="p-5 space-y-2">
-                    <p className="text-sm text-gray-500">Net payout</p>
-                    <p className="text-3xl font-bold text-emerald-600">
-                      {fMoney(selectedPayout.netPayout)}
-                    </p>
-                    <Badge
-                      className={`rounded-full ${
-                        selectedPayout.status === "PAID"
-                          ? "bg-emerald-50 text-emerald-700"
-                          : "bg-amber-50 text-amber-700"
-                      }`}
-                    >
-                      {selectedPayout.status}
-                    </Badge>
-                  </CardContent>
-                </Card>
-              )}
-
-              {/* Earnings */}
               {selectedPayout && (
                 <>
+                  <Card className="rounded-xl border bg-white shadow-sm">
+                    <CardContent className="p-5 space-y-2">
+                      <p className="text-sm text-gray-500">Net payout</p>
+                      <p className="text-3xl font-bold text-emerald-600">
+                        {fMoney(selectedPayout.netPayout)}
+                      </p>
+                      <Badge
+                        className={`rounded-full ${
+                          selectedPayout.status === "PAID"
+                            ? "bg-emerald-50 text-emerald-700"
+                            : "bg-amber-50 text-amber-700"
+                        }`}
+                      >
+                        {selectedPayout.status}
+                      </Badge>
+                    </CardContent>
+                  </Card>
+
                   <Card>
                     <CardHeader>
                       <CardTitle className="text-base">Earnings</CardTitle>
@@ -455,7 +481,6 @@ export default function FinancePage() {
                     </CardContent>
                   </Card>
 
-                  {/* Platform Charges */}
                   <Card>
                     <CardHeader>
                       <CardTitle className="text-base">Platform charges</CardTitle>
@@ -482,7 +507,6 @@ export default function FinancePage() {
                     </CardContent>
                   </Card>
 
-                  {/* Final Amount */}
                   <Card className="bg-emerald-50 border-emerald-100">
                     <CardContent className="p-5">
                       <p className="text-sm text-gray-600 mb-1">Amount transferred</p>
