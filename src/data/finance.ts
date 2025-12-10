@@ -7,6 +7,8 @@ export type OrderBreakdown = {
   platformFee: number;
   commissionFee: number;
   netAmount: number;
+  payoutDate?: string;
+
 };
 
 export type Payout = {
