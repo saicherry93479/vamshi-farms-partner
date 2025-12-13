@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { CheckCircle, Clock, Package, TrendingUp, MoreVertical } from "lucide-react";
+import { CheckCircle, Clock, Package, TrendingUp, MoreVertical, Star, Truck } from "lucide-react";
 import { AppShell } from "@/components/layout/app-shell";
 import { Button } from "@/components/ui/button";
 import {
@@ -29,6 +29,7 @@ const STATUS_TABS: { value: OrderStatus; label: string; icon: any }[] = [
   { value: "preparing", label: "Preparing", icon: Clock },
   { value: "ready", label: "Ready", icon: Package },
   { value: "picked_up", label: "Picked Up", icon: CheckCircle },
+  { value: "delivered", label: "Delivered", icon: Truck },
 ];
 
 export default function OrdersPage() {
@@ -36,6 +37,7 @@ export default function OrdersPage() {
     preparing: seedOrders.filter((order) => order.status === "preparing"),
     ready: seedOrders.filter((order) => order.status === "ready"),
     picked_up: seedOrders.filter((order) => order.status === "picked_up"),
+    delivered: seedOrders.filter((order) => order.status === "delivered"),
   }));
 
   const totalOrders = useMemo(
@@ -64,14 +66,23 @@ export default function OrdersPage() {
   const getStatusColor = (status: OrderStatus) => {
     switch (status) {
       case "preparing":
-        return "bg-amber-50 text-amber-700";
+        return "bg-amber-500 text-white";
       case "ready":
-        return "bg-blue-50 text-blue-700";
+        return "bg-blue-500 text-white";
       case "picked_up":
-        return "bg-emerald-50 text-emerald-700";
+        return "bg-emerald-500 text-white";
+      case "delivered":
+        return "bg-emerald-500 text-white";
       default:
-        return "bg-gray-50 text-gray-700";
+        return "bg-gray-500 text-white";
     }
+  };
+
+  // Rating badge color
+  const getRatingColor = (rating: number) => {
+    if (rating >= 4) return "bg-emerald-600 text-white";
+    if (rating >= 3) return "bg-amber-500 text-white";
+    return "bg-red-500 text-white";
   };
 
   return (
@@ -217,67 +228,61 @@ export default function OrdersPage() {
                         orderState[tab.value].map((order) => (
                           <Card
                             key={order.id}
-                            className="rounded-2xl border border-gray-100 bg-white shadow-[0_2px_8px_rgba(0,0,0,0.05)] hover:shadow-md transition-shadow"
+                            className="rounded-lg border border-gray-200 bg-white hover:shadow-md transition-shadow"
                           >
-                            <CardContent className="p-4">
-                              <div className="flex items-start justify-between">
-                                <div className="flex items-start gap-4 flex-1 min-w-0">
-                                  <Avatar className="h-10 w-10 flex-shrink-0">
-                                    <AvatarFallback className="text-sm font-semibold">
-                                      {order.customer.slice(0, 2).toUpperCase()}
-                                    </AvatarFallback>
-                                  </Avatar>
-                                  <div className="flex-1 min-w-0">
-                                    <div className="flex items-center gap-2 flex-wrap mb-1">
-                                      <p className="text-sm font-semibold text-gray-900 truncate">
-                                        {order.customer}
-                                      </p>
-                                      <Badge className={`rounded-full text-xs font-medium ${getStatusColor(order.status)}`}>
-                                        {order.status.replace("_", " ").toUpperCase()}
-                                      </Badge>
-                                    </div>
-                                    <p className="text-xs text-gray-500 mb-2">
-                                      {order.id} • ETA: {order.eta}
-                                    </p>
-                                    <div className="space-y-1">
-                                      {order.items.map((item, index) => (
-                                        <div key={index} className="flex items-center justify-between">
-                                          <p className="text-sm text-gray-700 truncate">{item}</p>
-                                          <p className="text-sm font-medium text-gray-900 ml-2 flex-shrink-0">
-                                            {order.itemQuantities?.[index] || 1}x
-                                          </p>
-                                        </div>
-                                      ))}
-                                    </div>
-                                  </div>
-                                </div>
-                                
-                                <div className="flex flex-col items-end gap-3 ml-4 flex-shrink-0">
-                                  <div className="flex items-center gap-2">
-                                    <Badge className="rounded-full bg-emerald-50 text-emerald-700 text-sm font-semibold">
-                                      ₹{order.total}
+                            <CardContent className="p-5">
+                              {/* Row 1: Status + Rating badges | Time/Date */}
+                              <div className="flex items-center justify-between mb-4">
+                                <div className="flex items-center gap-2">
+                                  <Badge className={`rounded px-3 py-1 text-xs font-semibold uppercase ${getStatusColor(order.status)}`}>
+                                    {order.status.replace("_", " ")}
+                                  </Badge>
+                                  {order.rating && (
+                                    <Badge className={`rounded px-2 py-1 text-xs font-semibold flex items-center gap-0.5 ${getRatingColor(order.rating)}`}>
+                                      {order.rating}
+                                      <Star className="h-3 w-3 fill-current" />
                                     </Badge>
-                                    <DropdownMenu>
-                                      <DropdownMenuTrigger asChild>
-                                        <Button variant="ghost" size="icon" className="h-8 w-8">
-                                          <MoreVertical className="h-4 w-4" />
-                                        </Button>
-                                      </DropdownMenuTrigger>
-                                      <DropdownMenuContent align="end" className="w-48">
-                                        <DropdownMenuItem>View Details</DropdownMenuItem>
-                                        <DropdownMenuItem>Contact Customer</DropdownMenuItem>
-                                        <DropdownMenuItem>Print Invoice</DropdownMenuItem>
-                                        {tab.value !== "picked_up" && (
-                                          <DropdownMenuItem>Cancel Order</DropdownMenuItem>
-                                        )}
-                                      </DropdownMenuContent>
-                                    </DropdownMenu>
+                                  )}
+                                </div>
+                                <span className="text-sm text-gray-600">
+                                  {order.orderTime} | {order.createdAt}
+                                </span>
+                              </div>
+
+                              {/* Row 2: Order ID | Customer Name */}
+                              <div className="flex items-center justify-between mb-4">
+                                <span className="text-sm font-medium text-gray-900">ID: {order.id}</span>
+                                <span className="text-sm text-gray-600">By {order.customer}</span>
+                              </div>
+
+                              {/* Row 3: Items with quantity and price */}
+                              <div className="space-y-2 mb-4 border-t border-gray-100 pt-4">
+                                {order.items.map((item, index) => (
+                                  <div key={index} className="flex items-center justify-between">
+                                    <span className="text-sm text-gray-800">
+                                      {order.itemQuantities?.[index] || 1} x {item}
+                                    </span>
+                                    <span className="text-sm font-medium text-gray-900">
+                                      ₹{(order.total / order.items.length).toFixed(2)}
+                                    </span>
                                   </div>
-                                  
+                                ))}
+                              </div>
+
+                              {/* Complaint text in red if present */}
+                              {order.complaint && (
+                                <p className="text-sm text-red-500 font-medium">
+                                  {order.complaint}
+                                </p>
+                              )}
+
+                              {/* Action buttons for preparing/ready states */}
+                              {(tab.value === "preparing" || tab.value === "ready") && (
+                                <div className="flex justify-end mt-4 pt-4 border-t border-gray-100">
                                   {tab.value === "preparing" && (
                                     <Button
                                       size="sm"
-                                      className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-full px-4"
+                                      className="bg-blue-600 hover:bg-blue-700 text-white rounded px-4"
                                       onClick={() => moveOrder(order.id, "preparing", "ready")}
                                     >
                                       Mark as Ready
@@ -286,14 +291,14 @@ export default function OrdersPage() {
                                   {tab.value === "ready" && (
                                     <Button
                                       size="sm"
-                                      className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-full px-4"
+                                      className="bg-emerald-600 hover:bg-emerald-700 text-white rounded px-4"
                                       onClick={() => moveOrder(order.id, "ready", "picked_up")}
                                     >
                                       Mark as Picked Up
                                     </Button>
                                   )}
                                 </div>
-                              </div>
+                              )}
                             </CardContent>
                           </Card>
                         ))

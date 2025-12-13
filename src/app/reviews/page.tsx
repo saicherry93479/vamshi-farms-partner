@@ -9,6 +9,7 @@ import {
   ShoppingBag,
   Search,
   Filter,
+  Star,
 } from "lucide-react";
 import { AppShell } from "@/components/layout/app-shell";
 import {
@@ -67,6 +68,29 @@ const ISSUE_TYPE_COLORS: Record<IssueType, string> = {
   Other: "bg-gray-50 text-gray-700",
 };
 
+// Star Rating Component
+function StarRating({ rating, size = "sm" }: { rating: number; size?: "sm" | "md" | "lg" }) {
+  const sizeClasses = {
+    sm: "h-3.5 w-3.5",
+    md: "h-4 w-4",
+    lg: "h-5 w-5",
+  };
+
+  return (
+    <div className="flex items-center gap-0.5">
+      {[1, 2, 3, 4, 5].map((star) => (
+        <Star
+          key={star}
+          className={`${sizeClasses[size]} ${star <= rating
+            ? "fill-amber-400 text-amber-400"
+            : "fill-gray-200 text-gray-200"
+            }`}
+        />
+      ))}
+    </div>
+  );
+}
+
 // Consistent date formatting to avoid hydration errors
 function formatDate(dateStr: string): string {
   const date = new Date(dateStr);
@@ -113,92 +137,61 @@ function ReviewCard({
   onAddNote: (review: Review) => void;
   onViewOrder: (review: Review) => void;
 }) {
+  // Rating badge color
+  const getRatingColor = (rating: number) => {
+    if (rating >= 4) return "bg-emerald-600 text-white";
+    if (rating >= 3) return "bg-amber-500 text-white";
+    return "bg-red-500 text-white";
+  };
+
   return (
     <div
-      className={`group relative rounded-xl border bg-white p-4 shadow-[0_1px_4px_rgba(0,0,0,0.05)] transition-all hover:shadow-md cursor-pointer ${
-        isActive
-          ? "border-emerald-300 ring-2 ring-emerald-100"
-          : "border-gray-100"
-      }`}
+      className={`group relative border-b border-gray-100 bg-white py-4 px-4 transition-all hover:bg-gray-50 cursor-pointer ${isActive ? "bg-blue-50" : ""}`}
       onClick={() => onSelect(review)}
     >
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex items-center gap-3 flex-1 min-w-0">
-          <Avatar className="h-9 w-9 flex-shrink-0">
-            <AvatarFallback className="text-xs font-semibold">
-              {review.customer.slice(0, 2).toUpperCase()}
-            </AvatarFallback>
-          </Avatar>
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-1.5 flex-wrap">
-              <p className="text-sm font-semibold text-gray-900 truncate">
-                {review.customer}
-              </p>
-              <Badge
-                className={`rounded-full text-xs font-medium border ${STATUS_COLORS[review.status]}`}
-              >
-                {review.status}
-              </Badge>
-            </div>
-            <p className="text-xs text-gray-500 mt-0.5">{review.date}</p>
-            <p className="text-xs font-medium text-gray-900 truncate mt-1">
-              {review.title}
-            </p>
+      {/* Main content row */}
+      <div className="flex items-start gap-3">
+        {/* Avatar */}
+        <Avatar className="h-10 w-10 flex-shrink-0 bg-gray-200">
+          <AvatarFallback className="text-xs font-semibold text-gray-600">
+            {review.customer.slice(0, 2).toUpperCase()}
+          </AvatarFallback>
+        </Avatar>
+
+        {/* Content */}
+        <div className="flex-1 min-w-0">
+          {/* Row 1: Name + Rating Badge + Date */}
+          <div className="flex items-center gap-2 mb-0.5">
+            <span className="text-sm font-semibold text-gray-900">{review.customer}</span>
+            <Badge
+              className={`rounded px-1.5 py-0.5 text-xs font-semibold flex items-center gap-0.5 ${getRatingColor(review.rating)}`}
+            >
+              {review.rating}
+              <Star className="h-3 w-3 fill-current" />
+            </Badge>
+            <span className="text-xs text-gray-400 ml-auto">{review.date}</span>
           </div>
-        </div>
-        <div className="flex items-center gap-2 flex-shrink-0">
-          <Badge className="rounded-full bg-emerald-50 text-emerald-700 text-xs font-medium">
-            {review.rating} ★
-          </Badge>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onSelect(review);
-                }}
-              >
-                <MoreVertical className="h-3.5 w-3.5" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-48">
-              <DropdownMenuItem onClick={() => onReply(review)}>
-                <MessageSquare className="h-4 w-4 mr-2" />
-                Reply to customer
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => onResolve(review)}>
-                <CheckCircle2 className="h-4 w-4 mr-2" />
-                Mark as resolved
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => onAddNote(review)}>
-                <FileText className="h-4 w-4 mr-2" />
-                Add internal note
-              </DropdownMenuItem>
-              {review.orderId && (
-                <DropdownMenuItem onClick={() => onViewOrder(review)}>
-                  <ShoppingBag className="h-4 w-4 mr-2" />
-                  View order details
-                </DropdownMenuItem>
-              )}
-            </DropdownMenuContent>
-          </DropdownMenu>
+
+          {/* Row 2: Order count */}
+          <p className="text-xs text-gray-500 mb-2">1 order with you</p>
+
+          {/* Review snippet */}
+          <p className="text-sm text-gray-700 line-clamp-2 mb-2">
+            {review.comment || review.title}
+          </p>
+
+          {/* View review details link */}
+          <button
+            className="text-sm text-blue-600 font-medium hover:underline"
+            onClick={(e) => {
+              e.stopPropagation();
+              onSelect(review);
+            }}
+          >
+            View review details →
+          </button>
         </div>
       </div>
-      {review.issueTypes.length > 0 && (
-        <div className="flex flex-wrap gap-1 mt-2">
-          {review.issueTypes.map((issue) => (
-            <Badge
-              key={issue}
-              className={`text-xs px-1.5 py-0.5 ${ISSUE_TYPE_COLORS[issue]}`}
-            >
-              {issue}
-            </Badge>
-          ))}
-        </div>
-      )}
     </div>
   );
 }
@@ -329,10 +322,10 @@ export default function ReviewsPage() {
       prev.map((r) =>
         r.id === activeReview.id
           ? {
-              ...r,
-              replies: [...r.replies, newReply],
-              status: r.status === "NEW" ? "RESPONDED" : r.status,
-            }
+            ...r,
+            replies: [...r.replies, newReply],
+            status: r.status === "NEW" ? "RESPONDED" : r.status,
+          }
           : r
       )
     );
@@ -357,20 +350,20 @@ export default function ReviewsPage() {
       prev.map((r) =>
         r.id === activeReview.id
           ? {
-              ...r,
-              status: "RESOLVED",
-              notes: resolveNote.trim()
-                ? [
-                    ...r.notes,
-                    {
-                      id: `note-${Date.now()}`,
-                      text: resolveNote,
-                      timestamp: new Date().toISOString(),
-                      author: "Partner Team",
-                    },
-                  ]
-                : r.notes,
-            }
+            ...r,
+            status: "RESOLVED",
+            notes: resolveNote.trim()
+              ? [
+                ...r.notes,
+                {
+                  id: `note-${Date.now()}`,
+                  text: resolveNote,
+                  timestamp: new Date().toISOString(),
+                  author: "Partner Team",
+                },
+              ]
+              : r.notes,
+          }
           : r
       )
     );
@@ -381,14 +374,14 @@ export default function ReviewsPage() {
         status: "RESOLVED",
         notes: resolveNote.trim()
           ? [
-              ...selected.notes,
-              {
-                id: `note-${Date.now()}`,
-                text: resolveNote,
-                timestamp: new Date().toISOString(),
-                author: "Partner Team",
-              },
-            ]
+            ...selected.notes,
+            {
+              id: `note-${Date.now()}`,
+              text: resolveNote,
+              timestamp: new Date().toISOString(),
+              author: "Partner Team",
+            },
+          ]
           : selected.notes,
       });
     }
@@ -511,11 +504,10 @@ export default function ReviewsPage() {
                               ratingFilter === rating ? null : rating
                             )
                           }
-                          className={`h-7 text-xs ${
-                            ratingFilter === rating
-                              ? "bg-emerald-600 text-white"
-                              : ""
-                          }`}
+                          className={`h-7 text-xs ${ratingFilter === rating
+                            ? "bg-emerald-600 text-white"
+                            : ""
+                            }`}
                         >
                           {rating} ★
                         </Button>
@@ -538,11 +530,10 @@ export default function ReviewsPage() {
                                 statusFilter === status ? null : status
                               )
                             }
-                            className={`h-7 text-xs border ${
-                              statusFilter === status
-                                ? "bg-emerald-600 text-white"
-                                : ""
-                            }`}
+                            className={`h-7 text-xs border ${statusFilter === status
+                              ? "bg-emerald-600 text-white"
+                              : ""
+                              }`}
                           >
                             {status}
                           </Button>
@@ -566,11 +557,10 @@ export default function ReviewsPage() {
                                 issueTypeFilter === issue ? null : issue
                               )
                             }
-                            className={`h-7 text-xs ${
-                              issueTypeFilter === issue
-                                ? "bg-emerald-600 text-white"
-                                : ""
-                            }`}
+                            className={`h-7 text-xs ${issueTypeFilter === issue
+                              ? "bg-emerald-600 text-white"
+                              : ""
+                              }`}
                           >
                             {issue}
                           </Button>
@@ -594,11 +584,10 @@ export default function ReviewsPage() {
                                 channelFilter === channel ? null : channel
                               )
                             }
-                            className={`h-7 text-xs ${
-                              channelFilter === channel
-                                ? "bg-emerald-600 text-white"
-                                : ""
-                            }`}
+                            className={`h-7 text-xs ${channelFilter === channel
+                              ? "bg-emerald-600 text-white"
+                              : ""
+                              }`}
                           >
                             {channel}
                           </Button>
@@ -683,12 +672,13 @@ export default function ReviewsPage() {
                         >
                           {selected.status}
                         </Badge>
-                        <Badge className="rounded-full bg-emerald-50 text-emerald-700 text-xs font-medium">
-                          {selected.rating} ★
-                        </Badge>
                         <Badge className="rounded-full bg-blue-50 text-blue-700 text-xs">
                           {selected.channel}
                         </Badge>
+                      </div>
+                      <div className="flex items-center gap-2 mt-2">
+                        <StarRating rating={selected.rating} size="lg" />
+                        <span className="text-sm text-gray-500">({selected.rating}/5)</span>
                       </div>
                       <p className="text-sm text-gray-500 mt-1">
                         Posted on {selected.date}
@@ -765,9 +755,9 @@ export default function ReviewsPage() {
                           timestamp={
                             selected.replies.length > 0
                               ? formatDate(
-                                  selected.replies[selected.replies.length - 1]
-                                    .timestamp
-                                )
+                                selected.replies[selected.replies.length - 1]
+                                  .timestamp
+                              )
                               : formatDate(selected.date)
                           }
                           isLast={selected.notes.length === 0}

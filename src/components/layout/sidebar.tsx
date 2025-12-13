@@ -35,15 +35,15 @@ export function Sidebar() {
   const pathname = usePathname();
 
   return (
-    <aside className="hidden md:flex fixed inset-y-0 left-0 w-64 flex-col border-r border-gray-100 bg-white">
+    <aside className="hidden md:flex fixed inset-y-0 left-0 w-64 flex-col border-r border-gray-800 bg-[#1a1f2e]">
       {/* Brand/Logo Section */}
-      <div className="flex items-center gap-3 px-6 py-5 border-b border-gray-100">
-        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-600 text-white">
+      <div className="flex items-center gap-3 px-6 py-5 border-b border-gray-800">
+        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-600 text-white">
           <span className="font-bold text-lg">VF</span>
         </div>
         <div>
-          <p className="text-sm font-semibold text-gray-900">Vamshi Farms</p>
-          <p className="text-xs text-gray-500">Partner Panel</p>
+          <p className="text-sm font-semibold text-white">Vamshi Farms</p>
+          <p className="text-xs text-gray-400">Partner Panel</p>
         </div>
       </div>
 
@@ -59,31 +59,26 @@ export function Sidebar() {
             <Link
               key={item.href}
               href={item.href}
-              className={`group relative flex items-center justify-between rounded-xl px-3 py-2.5 text-sm font-medium transition-all ${
+              className={`group relative flex items-center justify-between rounded-lg px-3 py-2.5 text-sm font-medium transition-all ${
                 isActive
-                  ? "bg-emerald-50 text-emerald-700"
-                  : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                  ? "bg-[#2d3548] text-blue-400"
+                  : "text-gray-300 hover:bg-[#252b3d] hover:text-white"
               }`}
             >
               <div className="flex items-center gap-3">
-                <div className={`flex h-8 w-8 items-center justify-center rounded-lg ${
-                  isActive
-                    ? "bg-emerald-100 text-emerald-700"
-                    : "bg-gray-100 text-gray-500 group-hover:bg-gray-200"
-                }`}>
-                  <Icon className="h-4 w-4" />
-                </div>
+                <Icon className={`h-4 w-4 ${isActive ? "text-blue-400" : "text-gray-400"}`} />
                 <span>{item.label}</span>
               </div>
               
               <div className="flex items-center gap-2">
                 {item.badge && (
-                  <Badge className="rounded-full bg-emerald-100 text-emerald-700 text-xs px-1.5 py-0.5 min-w-5">
+                  <Badge className={`rounded-full text-xs px-1.5 py-0.5 min-w-5 ${
+                    isActive 
+                      ? "bg-blue-500 text-white" 
+                      : "bg-gray-700 text-gray-300"
+                  }`}>
                     {item.badge}
                   </Badge>
-                )}
-                {isActive && (
-                  <ChevronRight className="h-4 w-4 text-emerald-500" />
                 )}
               </div>
             </Link>
@@ -93,7 +88,7 @@ export function Sidebar() {
 
       {/* Divider */}
       <div className="px-3">
-        <div className="border-t border-gray-100"></div>
+        <div className="border-t border-gray-800"></div>
       </div>
 
       {/* Secondary Navigation */}
@@ -104,11 +99,9 @@ export function Sidebar() {
             <Link
               key={item.href}
               href={item.href}
-              className="group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition-all"
+              className="group flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-gray-300 hover:bg-[#252b3d] hover:text-white transition-all"
             >
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gray-100 text-gray-500 group-hover:bg-gray-200">
-                <Icon className="h-4 w-4" />
-              </div>
+              <Icon className="h-4 w-4 text-gray-400" />
               <span>{item.label}</span>
             </Link>
           );
@@ -117,37 +110,32 @@ export function Sidebar() {
 
       {/* Help Section */}
       <div className="mt-auto p-4">
-        <div className="rounded-2xl bg-emerald-50 p-4">
+        <div className="rounded-xl bg-[#252b3d] p-4 border border-gray-800">
           <div className="flex items-start gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-100">
-              <HelpCircle className="h-5 w-5 text-emerald-600" />
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-500/10">
+              <HelpCircle className="h-4 w-4 text-blue-400" />
             </div>
             <div>
-              <p className="text-sm font-semibold text-emerald-900">Need help?</p>
-              <p className="text-xs text-emerald-700 mt-0.5">
-                Our support team responds in under 5 mins
+              <p className="text-sm font-semibold text-white">Need help?</p>
+              <p className="text-xs text-gray-400 mt-0.5">
+                Support team available
               </p>
-              <button className="mt-2 text-xs font-medium text-emerald-700 hover:text-emerald-800">
-                Chat now →
-              </button>
             </div>
           </div>
         </div>
       </div>
 
       {/* Bottom Info */}
-      <div className="border-t border-gray-100 p-4">
+      <div className="border-t border-gray-800 p-4">
         <div className="flex items-center gap-3">
-          <div className="h-9 w-9 rounded-full bg-emerald-100 flex items-center justify-center">
-            <span className="text-sm font-semibold text-emerald-700">VP</span>
+          <div className="h-9 w-9 rounded-full bg-blue-500/10 flex items-center justify-center">
+            <span className="text-sm font-semibold text-blue-400">VP</span>
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold text-gray-900 truncate">Vamsi Reddy</p>
-            <p className="text-xs text-gray-500 truncate">Partner Lead</p>
+            <p className="text-sm font-semibold text-white truncate">Vamsi Reddy</p>
+            <p className="text-xs text-gray-400 truncate">Partner Lead</p>
           </div>
-          <Badge className="rounded-full bg-emerald-100 text-emerald-700 text-xs">
-            Online
-          </Badge>
+          <div className="h-2 w-2 rounded-full bg-emerald-500"></div>
         </div>
       </div>
     </aside>
