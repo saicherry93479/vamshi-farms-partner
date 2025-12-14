@@ -14,7 +14,7 @@ import {
 import { AppShell } from "@/components/layout/app-shell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import type { Order, OrderStatus } from "@/data/orders";
 import { orders as seedOrders } from "@/data/orders";
@@ -232,31 +232,37 @@ export default function OrdersPage() {
           >
             {/* Tabs Header */}
             <div className="bg-white border-b border-gray-200 px-6">
-              <TabsList className="h-12 bg-transparent gap-6 p-0">
+              <div className="flex items-center gap-8 h-12">
                 {STATUS_TABS.map((tab) => {
                   const count = orderState[tab.value].length;
+                  const isActive = activeTab === tab.value;
                   return (
-                    <TabsTrigger
+                    <button
                       key={tab.value}
-                      value={tab.value}
-                      className="relative h-12 px-0 pb-0 pt-0 data-[state=active]:bg-transparent data-[state=active]:shadow-none rounded-none border-b-2 border-transparent data-[state=active]:border-blue-600 text-gray-500 data-[state=active]:text-blue-600 font-medium"
+                      onClick={() => setActiveTab(tab.value)}
+                      className={`relative h-full flex items-center gap-2 text-sm font-medium transition-colors ${
+                        isActive ? "text-gray-900" : "text-gray-500 hover:text-gray-700"
+                      }`}
                     >
                       {tab.label}
                       {count > 0 && (
-                        <Badge
-                          className={`ml-2 rounded-full text-xs px-1.5 py-0.5 min-w-5 ${
-                            activeTab === tab.value
+                        <span
+                          className={`rounded-full text-xs px-2 py-0.5 min-w-[22px] h-[22px] flex items-center justify-center font-medium ${
+                            isActive
                               ? "bg-blue-600 text-white"
                               : "bg-gray-200 text-gray-600"
                           }`}
                         >
                           {count}
-                        </Badge>
+                        </span>
                       )}
-                    </TabsTrigger>
+                      {isActive && (
+                        <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600" />
+                      )}
+                    </button>
                   );
                 })}
-              </TabsList>
+              </div>
             </div>
 
             {/* Search Bar */}

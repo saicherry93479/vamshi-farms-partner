@@ -173,14 +173,14 @@ export default function MenuPage() {
     <AppShell noPadding>
       <div className="flex flex-col h-[calc(100vh-64px)]">
         {/* Search and Actions Bar */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 bg-white">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 bg-white">
           <div className="relative w-[480px]">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
             <Input
               placeholder="Search"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10 h-11 border-gray-300 rounded-lg text-sm"
+              className="pl-10 h-11 border-0 bg-gray-50 rounded-lg text-sm focus-visible:ring-1 focus-visible:ring-gray-300"
             />
           </div>
           <div className="flex items-center gap-3">
@@ -216,9 +216,9 @@ export default function MenuPage() {
         {/* Main Content - Two Panel Layout */}
         <div className="flex flex-1 overflow-hidden">
           {/* Left Panel - Categories */}
-          <div className="w-[480px] border-r border-gray-200 bg-white flex flex-col">
+          <div className="w-[480px] border-r border-gray-100 bg-white flex flex-col">
             {/* Categories Header */}
-            <div className="px-5 py-4 border-b border-gray-100">
+            <div className="px-5 py-4">
               <h2 className="text-sm font-semibold text-gray-900">
                 Categories ({categories.length})
               </h2>
@@ -227,7 +227,7 @@ export default function MenuPage() {
             {/* Add Category */}
             <button
               onClick={() => setAddCategoryOpen(true)}
-              className="px-5 py-3 text-left text-sm text-blue-600 font-medium flex items-center gap-2 hover:bg-gray-50 border-b border-gray-100"
+              className="px-5 py-3 text-left text-sm text-blue-600 font-medium flex items-center gap-2 hover:bg-gray-50"
             >
               <Plus className="h-4 w-4" />
               Add Category
@@ -246,7 +246,7 @@ export default function MenuPage() {
                   <div key={category.id}>
                     {/* Category Item */}
                     <div
-                      className={`flex items-center justify-between px-5 py-4 cursor-pointer hover:bg-gray-50 border-b border-gray-100 ${
+                      className={`flex items-center justify-between px-5 py-4 cursor-pointer hover:bg-gray-50 ${
                         isSelected && !isExpanded ? "bg-blue-50" : ""
                       }`}
                       onClick={() => {
@@ -336,7 +336,7 @@ export default function MenuPage() {
             </div>
 
             {/* Go to Add Ons */}
-            <div className="border-t border-gray-200 px-5 py-4">
+            <div className="border-t border-gray-100 px-5 py-4">
               <button className="text-sm text-blue-600 font-medium flex items-center justify-between w-full hover:underline">
                 Go to Add Ons
                 <ArrowRight className="h-4 w-4" />
@@ -347,7 +347,7 @@ export default function MenuPage() {
           {/* Right Panel - Items */}
           <div className="flex-1 bg-white flex flex-col overflow-hidden">
             {/* Category Header */}
-            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
               <h2 className="text-base font-semibold text-gray-900">
                 {selectedCategoryData?.title || "Category"} ({filteredItems.length})
               </h2>
@@ -367,7 +367,7 @@ export default function MenuPage() {
             </div>
 
             {/* Add Item Options */}
-            <div className="flex items-center gap-8 px-6 py-4 border-b border-gray-200">
+            <div className="flex items-center gap-8 px-6 py-4 border-b border-gray-100">
               <button
                 onClick={() => setAddItemOpen(true)}
                 className="text-sm text-blue-600 font-medium flex items-center gap-2 hover:underline"
@@ -404,7 +404,7 @@ export default function MenuPage() {
                 filteredItems.map((item, index) => (
                   <div
                     key={item.id}
-                    className="flex items-start gap-4 px-6 py-5 bg-white border-b border-gray-100 hover:bg-gray-50 cursor-pointer group"
+                    className="flex items-start gap-4 px-6 py-5 bg-white hover:bg-gray-50 cursor-pointer group"
                     onClick={() => {
                       setSelectedItem({ ...item });
                       setEditItemOpen(true);
