@@ -6,28 +6,53 @@ export type Category = {
 
 export const categories: Category[] = [
   {
-    id: "cat-tiffin",
-    title: "Tiffin",
-    description: "South Indian breakfast items - dosas, idlis, and combos",
+    id: "cat-vegetables",
+    title: "Fresh Vegetables",
+    description: "Farm-fresh organic vegetables",
   },
   {
-    id: "cat-biryani",
-    title: "Biryani & Rice",
-    description: "Authentic Hyderabadi biryanis and rice dishes",
+    id: "cat-fruits",
+    title: "Fresh Fruits",
+    description: "Seasonal organic fruits",
   },
   {
-    id: "cat-curries",
-    title: "Curries",
-    description: "Traditional curries and gravies",
+    id: "cat-dairy",
+    title: "Dairy & Eggs",
+    description: "Fresh milk, curd, paneer & eggs",
   },
   {
-    id: "cat-starters",
-    title: "Starters",
-    description: "Appetizers and snacks",
+    id: "cat-grains",
+    title: "Grains & Pulses",
+    description: "Organic rice, dal & millets",
+  },
+  {
+    id: "cat-spices",
+    title: "Spices & Masalas",
+    description: "Pure organic spices & seasonings",
+  },
+  {
+    id: "cat-oils",
+    title: "Oils & Ghee",
+    description: "Cold-pressed oils & pure ghee",
+  },
+  {
+    id: "cat-snacks",
+    title: "Organic Snacks",
+    description: "Healthy organic snacks & namkeen",
   },
   {
     id: "cat-beverages",
     title: "Beverages",
-    description: "Fresh juices, lassi, and traditional drinks",
+    description: "Organic juices, tea & coffee",
+  },
+  {
+    id: "cat-honey",
+    title: "Honey & Jaggery",
+    description: "Natural sweeteners",
+  },
+  {
+    id: "cat-ready",
+    title: "Ready to Cook",
+    description: "Organic mixes & instant foods",
   },
 ];

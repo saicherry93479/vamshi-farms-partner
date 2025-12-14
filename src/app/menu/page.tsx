@@ -10,7 +10,6 @@ import {
   Clock,
   ArrowRight,
   Filter,
-  ChevronRight,
   Trash2,
   Edit2,
   Copy,
@@ -75,7 +74,8 @@ export default function MenuPage() {
   const [newItemName, setNewItemName] = useState("");
   const [newItemPrice, setNewItemPrice] = useState("");
   const [newItemUnit, setNewItemUnit] = useState("");
-  const [newItemIsVeg, setNewItemIsVeg] = useState(true);
+  const [newItemBrand, setNewItemBrand] = useState("");
+  const [newItemDiscount, setNewItemDiscount] = useState("");
 
   // Computed
   const selectedCategoryData = categories.find((c) => c.id === selectedCategory);
@@ -128,20 +128,22 @@ export default function MenuPage() {
   const addItem = () => {
     if (!newItemName.trim() || !newItemPrice) return;
     const newItem: InventoryItem = {
-      id: `INV-${Date.now()}`,
+      id: `PROD-${Date.now()}`,
       name: newItemName,
       category: selectedCategoryData?.title || "",
       categoryId: selectedCategory,
       price: parseFloat(newItemPrice),
-      unit: newItemUnit || "1 plate",
+      unit: newItemUnit || "1 unit",
       inStock: true,
-      isVeg: newItemIsVeg,
+      brand: newItemBrand || undefined,
+      discount: newItemDiscount ? parseFloat(newItemDiscount) : undefined,
     };
     setInventory((prev) => [...prev, newItem]);
     setNewItemName("");
     setNewItemPrice("");
     setNewItemUnit("");
-    setNewItemIsVeg(true);
+    setNewItemBrand("");
+    setNewItemDiscount("");
     setAddItemOpen(false);
   };
 
@@ -420,10 +422,8 @@ export default function MenuPage() {
                           loading="lazy"
                         />
                       ) : (
-                        <div className={`w-full h-full flex items-center justify-center bg-gradient-to-br from-amber-50 to-orange-100 ${!item.inStock ? 'opacity-50 grayscale' : ''}`}>
-                          <span className="text-4xl">
-                            {item.isVeg !== false ? "🥗" : "🍖"}
-                          </span>
+                        <div className={`w-full h-full flex items-center justify-center bg-gradient-to-br from-green-50 to-green-100 ${!item.inStock ? 'opacity-50 grayscale' : ''}`}>
+                          <span className="text-3xl">🌿</span>
                         </div>
                       )}
                       {!item.inStock && (
@@ -437,52 +437,83 @@ export default function MenuPage() {
 
                     {/* Item Details */}
                     <div className="flex-1 min-w-0">
-                      {/* Veg/Non-veg indicator */}
-                      <div className="flex items-center gap-2 mb-2">
+                      {/* Veg/Non-veg indicator + Badges */}
+                      <div className="flex items-center gap-2 mb-1.5">
                         <span
-                          className={`w-5 h-5 border-2 rounded flex items-center justify-center ${
+                          className={`w-4 h-4 border-2 rounded-sm flex items-center justify-center ${
                             item.isVeg !== false
                               ? "border-green-600"
                               : "border-red-600"
                           }`}
                         >
                           <span
-                            className={`w-2.5 h-2.5 rounded-full ${
+                            className={`w-2 h-2 rounded-full ${
                               item.isVeg !== false ? "bg-green-600" : "bg-red-600"
                             }`}
                           ></span>
                         </span>
+                        {item.organic && (
+                          <span className="text-[10px] font-semibold text-green-700 bg-green-50 px-1.5 py-0.5 rounded">
+                            ORGANIC
+                          </span>
+                        )}
+                        {item.bestSeller && (
+                          <span className="text-[10px] font-semibold text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded">
+                            BESTSELLER
+                          </span>
+                        )}
+                        {item.farmFresh && (
+                          <span className="text-[10px] font-semibold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded">
+                            FARM FRESH
+                          </span>
+                        )}
                       </div>
 
                       {/* Item Name */}
-                      <h3 className="text-sm font-medium text-gray-900 mb-1">
+                      <h3 className="text-sm font-medium text-gray-900 mb-0.5 line-clamp-2">
                         {item.name}
                       </h3>
 
-                      {/* Price */}
-                      <p className="text-sm font-bold text-gray-900 mb-2">
-                        ₹{item.price}
+                      {/* Unit */}
+                      <p className="text-xs text-gray-400 mb-1">
+                        {item.unit}
                       </p>
 
-                      {/* Tags */}
-                      <div className="flex items-center gap-2 text-xs text-gray-500">
-                        <span className="flex items-center gap-1">
-                          <span className="text-amber-500">🥇</span>
-                          Medium
-                        </span>
-                        <span className="text-gray-300">|</span>
-                        <span>0.00 kcal</span>
-                        <span className="text-gray-300">|</span>
-                        <span>0.00g protein</span>
-                        <ChevronRight className="h-3 w-3 text-gray-400" />
-                      </div>
-
-                      {/* Warning (random for demo) */}
-                      {index < 2 && (
-                        <p className="text-xs text-red-500 mt-2 font-medium">
-                          1 media rejected in moderation
+                      {/* Description */}
+                      {item.description && (
+                        <p className="text-xs text-gray-500 mb-1.5 line-clamp-1">
+                          {item.description}
                         </p>
                       )}
+
+                      {/* Rating */}
+                      {item.rating && (
+                        <div className="flex items-center gap-1.5 mb-1.5">
+                          <span className="flex items-center gap-0.5 bg-green-600 text-white text-[10px] font-semibold px-1.5 py-0.5 rounded">
+                            {item.rating} ★
+                          </span>
+                          <span className="text-xs text-gray-400">
+                            ({item.reviews?.toLocaleString()})
+                          </span>
+                        </div>
+                      )}
+
+                      {/* Price */}
+                      <div className="flex items-center gap-2">
+                        <p className="text-sm font-bold text-gray-900">
+                          ₹{item.discount ? Math.round(item.price * (1 - item.discount / 100)) : item.price}
+                        </p>
+                        {item.discount && (
+                          <>
+                            <span className="text-xs text-gray-400 line-through">
+                              ₹{item.price}
+                            </span>
+                            <span className="text-xs font-semibold text-green-600">
+                              {item.discount}% off
+                            </span>
+                          </>
+                        )}
+                      </div>
                     </div>
 
                     {/* Actions (visible on hover) */}
@@ -583,9 +614,9 @@ export default function MenuPage() {
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-700">Item Name *</label>
+              <label className="text-sm font-medium text-gray-700">Product Name *</label>
               <Input
-                placeholder="e.g., Masala Dosa"
+                placeholder="e.g., iPhone 15 Pro"
                 value={newItemName}
                 onChange={(e) => setNewItemName(e.target.value)}
               />
@@ -595,7 +626,7 @@ export default function MenuPage() {
                 <label className="text-sm font-medium text-gray-700">Price (₹) *</label>
                 <Input
                   type="number"
-                  placeholder="99"
+                  placeholder="9999"
                   value={newItemPrice}
                   onChange={(e) => setNewItemPrice(e.target.value)}
                 />
@@ -603,21 +634,30 @@ export default function MenuPage() {
               <div className="space-y-2">
                 <label className="text-sm font-medium text-gray-700">Unit</label>
                 <Input
-                  placeholder="1 plate"
+                  placeholder="1 unit"
                   value={newItemUnit}
                   onChange={(e) => setNewItemUnit(e.target.value)}
                 />
               </div>
             </div>
-            <div className="flex items-center justify-between py-2">
-              <div>
-                <p className="text-sm font-medium text-gray-700">Vegetarian</p>
-                <p className="text-xs text-gray-500">Is this item vegetarian?</p>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-700">Brand</label>
+                <Input
+                  placeholder="e.g., Apple, Nike"
+                  value={newItemBrand}
+                  onChange={(e) => setNewItemBrand(e.target.value)}
+                />
               </div>
-              <Switch
-                checked={newItemIsVeg}
-                onCheckedChange={setNewItemIsVeg}
-              />
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-700">Discount (%)</label>
+                <Input
+                  type="number"
+                  placeholder="0"
+                  value={newItemDiscount}
+                  onChange={(e) => setNewItemDiscount(e.target.value)}
+                />
+              </div>
             </div>
           </div>
           <DialogFooter>
@@ -662,10 +702,8 @@ export default function MenuPage() {
                     </div>
                   </>
                 ) : (
-                  <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-br from-amber-50 to-orange-100">
-                    <span className="text-6xl mb-2">
-                      {selectedItem.isVeg !== false ? "🥗" : "🍖"}
-                    </span>
+                  <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-br from-green-50 to-green-100">
+                    <span className="text-6xl mb-2">🌿</span>
                     <Button variant="outline" size="sm">
                       Upload Image
                     </Button>
@@ -731,17 +769,31 @@ export default function MenuPage() {
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="flex items-center justify-between py-2">
-                  <div>
-                    <p className="text-sm font-medium text-gray-700">Vegetarian</p>
-                    <p className="text-xs text-gray-500">Is this item vegetarian?</p>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-gray-700">Brand</label>
+                    <Input
+                      value={selectedItem.brand || ""}
+                      onChange={(e) =>
+                        setSelectedItem({ ...selectedItem, brand: e.target.value })
+                      }
+                      placeholder="e.g., Apple, Nike"
+                    />
                   </div>
-                  <Switch
-                    checked={selectedItem.isVeg !== false}
-                    onCheckedChange={(checked) =>
-                      setSelectedItem({ ...selectedItem, isVeg: checked })
-                    }
-                  />
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-gray-700">Discount (%)</label>
+                    <Input
+                      type="number"
+                      value={selectedItem.discount || ""}
+                      onChange={(e) =>
+                        setSelectedItem({
+                          ...selectedItem,
+                          discount: parseFloat(e.target.value) || 0,
+                        })
+                      }
+                      placeholder="0"
+                    />
+                  </div>
                 </div>
                 <div className="flex items-center justify-between py-2">
                   <div>
