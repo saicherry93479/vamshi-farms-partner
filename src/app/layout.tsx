@@ -1,11 +1,11 @@
 import type { Metadata } from "next";
-import { Poppins } from "next/font/google";
+import { DM_Sans } from "next/font/google";
 import "./globals.css";
 
-const poppins = Poppins({
+const dmSans = DM_Sans({
   subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
-  variable: "--font-poppins",
+  weight: ["300", "400", "500", "600", "700"],
+  variable: "--font-dm-sans",
   display: "swap",
 });
 
@@ -22,7 +22,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${poppins.className} min-h-screen bg-[#fafafa] text-gray-800 antialiased`}
+        className={`${dmSans.className} min-h-screen bg-[#fafafa] text-gray-800 antialiased`}
       >
         <div className="min-h-screen flex">{children}</div>
       </body>

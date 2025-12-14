@@ -31,138 +31,138 @@ export type Review = {
   notes: InternalNote[];
 };
 
+// Get dates relative to today for realistic "X days ago" display
+const today = new Date();
+const getDateDaysAgo = (days: number): string => {
+  const date = new Date(today);
+  date.setDate(date.getDate() - days);
+  return date.toISOString().split('T')[0];
+};
+
 export const reviews: Review[] = [
   {
     id: "rev-101",
-    customer: "Tanvi D.",
-    rating: 5,
-    title: "Consistent freshness",
+    customer: "Vineeta Jaiswal",
+    rating: 1,
+    title: "Poor quality",
     comment:
-      "Every box feels hand-picked. The greens stay crisp for days and the honey is incredible.",
-    date: "2025-01-04",
+      "Incomplete order, too cold. Not good quality. Didn't expect this from Zomato.",
+    date: getDateDaysAgo(1),
     channel: "App",
-    status: "RESOLVED",
-    issueTypes: [],
-    orderId: "ORD-1024",
-    replies: [
-      {
-        id: "reply-1",
-        text: "Thank you for your kind words! We're thrilled that you're enjoying the freshness. We'll continue to maintain our quality standards.",
-        timestamp: "2025-01-04T14:30:00",
-        author: "Partner Team",
-      },
-    ],
+    status: "NEW",
+    issueTypes: ["Missing items", "Taste"],
+    orderId: "7530992338",
+    replies: [],
     notes: [],
   },
   {
     id: "rev-102",
+    customer: "Surya",
+    rating: 1,
+    title: "Delayed order",
+    comment: "Order always gets delayed",
+    date: getDateDaysAgo(7),
+    channel: "App",
+    status: "NEW",
+    issueTypes: ["Delay"],
+    orderId: "7530992339",
+    replies: [],
+    notes: [],
+  },
+  {
+    id: "rev-103",
+    customer: "Vijaya",
+    rating: 1,
+    title: "Missing items in 1+1 offer",
+    comment:
+      "i didn't get 1 +1 offer i ordered 4 idly and 4 bonda then i should get 8idlies and 8 bonda i didn't get",
+    date: getDateDaysAgo(8),
+    channel: "App",
+    status: "NEW",
+    issueTypes: ["Missing items", "Other"],
+    orderId: "7530992340",
+    replies: [],
+    notes: [],
+  },
+  {
+    id: "rev-104",
     customer: "Rahul M.",
     rating: 4,
     title: "Fast pickup",
     comment:
       "Pickup window is smooth. Would love earlier slots on Saturdays for bulk prep.",
-    date: "2025-01-02",
+    date: getDateDaysAgo(12),
     channel: "WhatsApp",
     status: "RESPONDED",
     issueTypes: [],
-    orderId: "ORD-1025",
+    orderId: "7530992341",
     replies: [
       {
         id: "reply-2",
         text: "Thanks for the feedback! We're exploring earlier Saturday slots. Will update you soon.",
-        timestamp: "2025-01-02T16:20:00",
-        author: "Partner Team",
-      },
-    ],
-    notes: [
-      {
-        id: "note-1",
-        text: "Customer is a regular bulk buyer. Consider priority scheduling.",
-        timestamp: "2025-01-02T16:25:00",
-        author: "Manager",
-      },
-    ],
-  },
-  {
-    id: "rev-103",
-    customer: "Priya K.",
-    rating: 5,
-    title: "Kids love the milk",
-    comment:
-      "A2 milk has been a game changer. Please keep stock notifications coming.",
-    date: "2024-12-29",
-    channel: "App",
-    status: "RESOLVED",
-    issueTypes: [],
-    orderId: "ORD-1026",
-    replies: [
-      {
-        id: "reply-3",
-        text: "We're so happy to hear that! Stock notifications are now enabled for your account.",
-        timestamp: "2024-12-29T18:15:00",
+        timestamp: getDateDaysAgo(11),
         author: "Partner Team",
       },
     ],
     notes: [],
   },
   {
-    id: "rev-104",
-    customer: "Sumeet B.",
-    rating: 3,
-    title: "Inventory visibility",
+    id: "rev-105",
+    customer: "Priya K.",
+    rating: 5,
+    title: "Great food",
     comment:
-      "Occasionally items show available but get swapped at pickup. Need clearer slots.",
-    date: "2024-12-27",
-    channel: "In-person",
-    status: "NEW",
-    issueTypes: ["Missing items", "Delay"],
-    orderId: "ORD-1027",
-    replies: [],
-    notes: [
+      "The food quality is excellent. Loved the idli and dosa. Will order again!",
+    date: getDateDaysAgo(14),
+    channel: "App",
+    status: "RESOLVED",
+    issueTypes: [],
+    orderId: "7530992342",
+    replies: [
       {
-        id: "note-2",
-        text: "Issue reported multiple times. Review inventory sync process.",
-        timestamp: "2024-12-27T10:00:00",
-        author: "Support Lead",
+        id: "reply-3",
+        text: "Thank you so much for your kind words! We're glad you enjoyed the food.",
+        timestamp: getDateDaysAgo(13),
+        author: "Partner Team",
       },
     ],
-  },
-  {
-    id: "rev-105",
-    customer: "Anjali S.",
-    rating: 2,
-    title: "Late delivery",
-    comment:
-      "Order was delayed by 2 hours. Had to wait at the pickup point.",
-    date: "2025-01-05",
-    channel: "App",
-    status: "NEW",
-    issueTypes: ["Delay"],
-    orderId: "ORD-1028",
-    replies: [],
     notes: [],
   },
   {
     id: "rev-106",
-    customer: "Vikram R.",
-    rating: 4,
-    title: "Great quality",
+    customer: "Anjali S.",
+    rating: 2,
+    title: "Cold food",
     comment:
-      "Products are fresh and well-packaged. Very satisfied with the service.",
-    date: "2025-01-03",
+      "Food arrived cold. Packaging was not proper. Expected better from this restaurant.",
+    date: getDateDaysAgo(3),
+    channel: "App",
+    status: "NEW",
+    issueTypes: ["Packaging", "Taste"],
+    orderId: "7530992343",
+    replies: [],
+    notes: [],
+  },
+  {
+    id: "rev-107",
+    customer: "Kiran",
+    rating: 3,
+    title: "Average experience",
+    comment:
+      "Food was okay but portion size was less for the price. Delivery was on time though.",
+    date: getDateDaysAgo(5),
     channel: "Website",
     status: "RESPONDED",
     issueTypes: [],
-    orderId: "ORD-1029",
+    orderId: "7530992344",
     replies: [
       {
         id: "reply-4",
-        text: "Thank you for your feedback! We appreciate your support.",
-        timestamp: "2025-01-03T12:00:00",
+        text: "We appreciate your feedback. We'll work on improving our portion sizes.",
+        timestamp: getDateDaysAgo(4),
         author: "Partner Team",
       },
     ],
     notes: [],
   },
 ];
-

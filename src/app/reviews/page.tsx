@@ -2,250 +2,526 @@
 
 import { useMemo, useState } from "react";
 import {
-  MoreVertical,
-  MessageSquare,
-  CheckCircle2,
-  FileText,
-  ShoppingBag,
   Search,
-  Filter,
   Star,
+  HelpCircle,
+  FileText,
+  Send,
+  SlidersHorizontal,
+  X,
+  Check,
+  AlertCircle,
+  Info,
 } from "lucide-react";
 import { AppShell } from "@/components/layout/app-shell";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import type {
-  Review,
-  ReviewStatus,
-  IssueType,
-  Reply,
-  InternalNote,
-} from "@/data/reviews";
+import type { Review } from "@/data/reviews";
 import { reviews as seedReviews } from "@/data/reviews";
 
-const STATUS_COLORS: Record<ReviewStatus, string> = {
-  NEW: "bg-yellow-50 text-yellow-700 border-yellow-200",
-  RESPONDED: "bg-blue-50 text-blue-700 border-blue-200",
-  RESOLVED: "bg-emerald-50 text-emerald-700 border-emerald-200",
-};
+// Helper to calculate relative time
+function getRelativeTime(dateStr: string): string {
+  const date = new Date(dateStr);
+  const now = new Date();
+  const diffTime = now.getTime() - date.getTime();
+  const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
 
-const ISSUE_TYPE_COLORS: Record<IssueType, string> = {
-  Delay: "bg-orange-50 text-orange-700",
-  Packaging: "bg-purple-50 text-purple-700",
-  "Missing items": "bg-red-50 text-red-700",
-  Taste: "bg-pink-50 text-pink-700",
-  Other: "bg-gray-50 text-gray-700",
-};
+  if (diffDays === 0) return "today";
+  if (diffDays === 1) return "yesterday";
+  if (diffDays < 7) return `${diffDays} days ago`;
+  if (diffDays < 14) return "1 week ago";
+  if (diffDays < 30) return `${Math.floor(diffDays / 7)} weeks ago`;
+  if (diffDays < 60) return "1 month ago";
+  return `${Math.floor(diffDays / 30)} months ago`;
+}
 
-// Star Rating Component
-function StarRating({ rating, size = "sm" }: { rating: number; size?: "sm" | "md" | "lg" }) {
-  const sizeClasses = {
-    sm: "h-3.5 w-3.5",
-    md: "h-4 w-4",
-    lg: "h-5 w-5",
+// Helper to format date
+function formatDateTime(dateStr: string): string {
+  const date = new Date(dateStr);
+  const hours = date.getHours();
+  const minutes = date.getMinutes().toString().padStart(2, "0");
+  const ampm = hours >= 12 ? "PM" : "AM";
+  const hour12 = hours % 12 || 12;
+  const day = date.getDate();
+  const month = date.toLocaleString("default", { month: "long" });
+  return `${hour12}:${minutes} ${ampm} | ${day} ${month}`;
+}
+
+// Rating Badge Component
+function RatingBadge({ rating }: { rating: number }) {
+  const getBgColor = () => {
+    if (rating >= 4) return "bg-green-600";
+    if (rating >= 3) return "bg-yellow-500";
+    return "bg-orange-500";
   };
 
   return (
-    <div className="flex items-center gap-0.5">
-      {[1, 2, 3, 4, 5].map((star) => (
-        <Star
-          key={star}
-          className={`${sizeClasses[size]} ${star <= rating
-            ? "fill-amber-400 text-amber-400"
-            : "fill-gray-200 text-gray-200"
-            }`}
-        />
-      ))}
-    </div>
+    <span
+      className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-xs font-semibold text-white ${getBgColor()}`}
+    >
+      {rating}
+      <Star className="h-3 w-3 fill-white" />
+    </span>
   );
 }
 
-// Consistent date formatting to avoid hydration errors
-function formatDate(dateStr: string): string {
-  const date = new Date(dateStr);
-  const months = [
-    "Jan",
-    "Feb",
-    "Mar",
-    "Apr",
-    "May",
-    "Jun",
-    "Jul",
-    "Aug",
-    "Sep",
-    "Oct",
-    "Nov",
-    "Dec",
-  ];
-  const month = months[date.getMonth()];
-  const day = date.getDate();
-  const year = date.getFullYear();
-  let hours = date.getHours();
-  const minutes = date.getMinutes().toString().padStart(2, "0");
-  const ampm = hours >= 12 ? "PM" : "AM";
-  hours = hours % 12;
-  hours = hours ? hours : 12; // 0 should be 12
-  const hoursStr = hours.toString().padStart(2, "0");
-  return `${month} ${day}, ${year}, ${hoursStr}:${minutes} ${ampm}`;
-}
-
-function ReviewCard({
+// Review List Item Component
+function ReviewListItem({
   review,
   isActive,
   onSelect,
-  onReply,
-  onResolve,
-  onAddNote,
-  onViewOrder,
 }: {
   review: Review;
   isActive: boolean;
   onSelect: (review: Review) => void;
-  onReply: (review: Review) => void;
-  onResolve: (review: Review) => void;
-  onAddNote: (review: Review) => void;
-  onViewOrder: (review: Review) => void;
 }) {
-  // Rating badge color
-  const getRatingColor = (rating: number) => {
-    if (rating >= 4) return "bg-emerald-600 text-white";
-    if (rating >= 3) return "bg-amber-500 text-white";
-    return "bg-red-500 text-white";
-  };
-
   return (
     <div
-      className={`group relative border-b border-gray-100 bg-white py-4 px-4 transition-all hover:bg-gray-50 cursor-pointer ${isActive ? "bg-blue-50" : ""}`}
+      className={`border-b border-gray-100 py-4 px-4 cursor-pointer transition-colors ${
+        isActive ? "bg-gray-50" : "hover:bg-gray-50"
+      }`}
       onClick={() => onSelect(review)}
     >
-      {/* Main content row */}
+      {/* Header row: Avatar, Name, Orders, Rating, Time */}
       <div className="flex items-start gap-3">
-        {/* Avatar */}
-        <Avatar className="h-10 w-10 flex-shrink-0 bg-gray-200">
-          <AvatarFallback className="text-xs font-semibold text-gray-600">
-            {review.customer.slice(0, 2).toUpperCase()}
+        <Avatar className="h-10 w-10 flex-shrink-0 bg-slate-200">
+          <AvatarFallback className="text-sm font-medium text-slate-600 bg-slate-200">
+            {review.customer.slice(0, 1).toUpperCase()}
           </AvatarFallback>
         </Avatar>
 
-        {/* Content */}
         <div className="flex-1 min-w-0">
-          {/* Row 1: Name + Rating Badge + Date */}
-          <div className="flex items-center gap-2 mb-0.5">
-            <span className="text-sm font-semibold text-gray-900">{review.customer}</span>
-            <Badge
-              className={`rounded px-1.5 py-0.5 text-xs font-semibold flex items-center gap-0.5 ${getRatingColor(review.rating)}`}
-            >
-              {review.rating}
-              <Star className="h-3 w-3 fill-current" />
-            </Badge>
-            <span className="text-xs text-gray-400 ml-auto">{review.date}</span>
+          <div className="flex items-center justify-between">
+            <div>
+              <span className="text-sm font-semibold text-gray-900">
+                {review.customer}
+              </span>
+              <p className="text-xs text-gray-500">1 order with you</p>
+            </div>
+            <div className="flex items-center gap-2">
+              <RatingBadge rating={review.rating} />
+              <span className="text-xs text-gray-400">
+                {getRelativeTime(review.date)}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Review text */}
+      <p className="text-sm text-gray-700 mt-3 line-clamp-2">
+        {review.comment || review.title}
+      </p>
+
+      {/* View details link */}
+      <button
+        className="text-sm text-blue-600 font-medium mt-2 hover:underline inline-flex items-center gap-1"
+        onClick={(e) => {
+          e.stopPropagation();
+          onSelect(review);
+        }}
+      >
+        View review details
+        <span className="text-blue-600">▸</span>
+      </button>
+    </div>
+  );
+}
+
+// Order Details View Component (shown in the right panel)
+function OrderDetailsView({
+  review,
+  onClose,
+}: {
+  review: Review;
+  onClose: () => void;
+}) {
+  const timelineSteps = [
+    { label: "Placed", time: "11:50 AM", status: "completed" },
+    { label: "Accepted", time: "11:52 AM", status: "completed" },
+    { label: "Ready", time: "11:52 AM", status: "error", badge: "INCORRECT" },
+    { label: "Delivery partner arrived", time: "12:08 PM", status: "completed" },
+    { label: "Picked up", time: "12:13 PM", status: "completed" },
+    { label: "Delivered", time: "12:37 PM", status: "completed" },
+  ];
+
+  return (
+    <div className="flex flex-col h-full">
+      {/* Header */}
+      <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+        <div>
+          <p className="text-base font-semibold text-gray-900">
+            ID: {review.orderId || "N/A"}
+          </p>
+          <p className="text-sm text-gray-500">Oka Manchi Katha, Ghatkesar</p>
+        </div>
+        <div className="flex items-center gap-3">
+          <span className="text-sm text-gray-500">
+            {formatDateTime(review.date)}
+          </span>
+          <Button
+            variant="outline"
+            size="sm"
+            className="text-blue-600 border-blue-600 hover:bg-blue-50"
+          >
+            Help
+          </Button>
+          <button
+            onClick={onClose}
+            className="p-1 hover:bg-gray-100 rounded"
+          >
+            <X className="h-5 w-5 text-gray-500" />
+          </button>
+        </div>
+      </div>
+
+      {/* Content */}
+      <div className="flex-1 overflow-y-auto">
+        {/* Delivery Status */}
+        <div className="px-6 py-4 border-b border-gray-100">
+          <div className="flex items-center justify-between">
+            <span className="px-2.5 py-1 bg-green-500 text-white text-xs font-semibold rounded">
+              DELIVERED
+            </span>
+            <span className="text-sm text-gray-600">
+              1 order by {review.customer.split(" ")[0]}
+            </span>
+          </div>
+        </div>
+
+        {/* Customer Complaint */}
+        <div className="px-6 py-4 border-b border-gray-100 bg-gray-50">
+          <div className="flex items-start justify-between">
+            <div>
+              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
+                Customer Complaint
+              </p>
+              <p className="text-sm text-gray-700">
+                Refund ₹100 given to customer
+              </p>
+              <button className="text-sm text-blue-600 font-medium mt-1 hover:underline inline-flex items-center gap-1">
+                View details
+                <span>▸</span>
+              </button>
+            </div>
+            <span className="text-sm font-semibold text-green-600">
+              RESOLVED
+            </span>
+          </div>
+        </div>
+
+        {/* Customer Rating */}
+        <div className="px-6 py-4 border-b border-gray-100">
+          <div className="flex items-center gap-2 mb-2">
+            <span className="text-sm text-gray-600">Customer rating</span>
+            <RatingBadge rating={review.rating} />
+          </div>
+          <p className="text-sm text-gray-700">
+            &quot;{review.comment || review.title}&quot;
+          </p>
+        </div>
+
+        {/* Order Timeline */}
+        <div className="px-6 py-4 border-b border-gray-100">
+          <div className="flex items-center justify-between mb-4">
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
+              Order Timeline
+            </p>
+            <span className="text-sm text-gray-600">
+              Delivered in 47 minutes
+            </span>
           </div>
 
-          {/* Row 2: Order count */}
-          <p className="text-xs text-gray-500 mb-2">1 order with you</p>
+          {/* Timeline */}
+          <div className="relative">
+            <div className="flex items-start justify-between">
+              {timelineSteps.map((step, index) => (
+                <div key={step.label} className="flex flex-col items-center relative flex-1">
+                  {/* Connector line */}
+                  {index < timelineSteps.length - 1 && (
+                    <div className="absolute top-3 left-1/2 w-full h-0.5 bg-green-500" />
+                  )}
+                  
+                  {/* Icon */}
+                  <div
+                    className={`relative z-10 w-6 h-6 rounded-full flex items-center justify-center ${
+                      step.status === "error"
+                        ? "bg-orange-500"
+                        : "bg-green-500"
+                    }`}
+                  >
+                    {step.status === "error" ? (
+                      <AlertCircle className="h-4 w-4 text-white" />
+                    ) : (
+                      <Check className="h-4 w-4 text-white" />
+                    )}
+                  </div>
 
-          {/* Review snippet */}
-          <p className="text-sm text-gray-700 line-clamp-2 mb-2">
-            {review.comment || review.title}
-          </p>
+                  {/* Label and Time */}
+                  <p className="text-[10px] text-gray-700 mt-2 text-center leading-tight">
+                    {step.label}
+                  </p>
+                  <p className="text-[10px] text-gray-500">{step.time}</p>
 
-          {/* View review details link */}
-          <button
-            className="text-sm text-blue-600 font-medium hover:underline"
-            onClick={(e) => {
-              e.stopPropagation();
-              onSelect(review);
-            }}
-          >
-            View review details →
-          </button>
+                  {/* Error Badge */}
+                  {step.badge && (
+                    <>
+                      <span className="mt-1 px-1.5 py-0.5 bg-orange-500 text-white text-[9px] font-semibold rounded">
+                        {step.badge}
+                      </span>
+                      <button className="text-[10px] text-blue-600 font-medium mt-0.5 hover:underline">
+                        View
+                      </button>
+                    </>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Order Details */}
+        <div className="px-6 py-4 border-b border-gray-100">
+          <div className="flex items-center justify-between mb-4">
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
+              Order Details
+            </p>
+            <Button
+              variant="outline"
+              size="sm"
+              className="text-blue-600 border-blue-600 hover:bg-blue-50"
+            >
+              <FileText className="h-4 w-4 mr-1" />
+              ORDER
+            </Button>
+          </div>
+
+          {/* Items */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-gray-900 font-medium underline">
+                1 x Breakfast Combo [Mini]
+              </span>
+              <span className="text-sm text-gray-900">₹249</span>
+            </div>
+
+            <div className="flex items-center justify-between text-sm text-gray-500">
+              <span>1 item</span>
+              <span>₹249</span>
+            </div>
+
+            <div className="flex items-center justify-between text-sm text-gray-500">
+              <span>Restaurant Packaging Charges</span>
+              <span>₹5</span>
+            </div>
+
+            <div className="flex items-center justify-between text-sm text-gray-500">
+              <span className="border-b border-dashed border-gray-300">
+                Taxes
+              </span>
+              <span>₹0</span>
+            </div>
+
+            <div className="flex items-center justify-between text-sm text-gray-500">
+              <span className="border-b border-dashed border-gray-300">
+                Discount
+              </span>
+              <span>-₹80</span>
+            </div>
+
+            <div className="flex items-center justify-between pt-2 border-t border-gray-200">
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-semibold text-gray-900">
+                  Total Bill
+                </span>
+                <span className="px-2 py-0.5 bg-green-100 text-green-700 text-xs font-semibold rounded">
+                  PAID
+                </span>
+              </div>
+              <span className="text-sm font-semibold text-gray-900">₹174</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Delivery Partner Info */}
+        <div className="px-6 py-4 border-b border-gray-100">
+          <div className="flex items-center gap-3">
+            <Avatar className="h-10 w-10 bg-orange-100">
+              <AvatarFallback className="text-sm font-medium text-orange-600 bg-orange-100">
+                Y
+              </AvatarFallback>
+            </Avatar>
+            <span className="text-sm text-gray-700">
+              Yelchala delivered the order at 12:37 PM
+            </span>
+          </div>
+        </div>
+
+        {/* Customer Details */}
+        <div className="px-6 py-4">
+          <div className="flex items-center justify-between mb-4">
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
+              Customer Details
+            </p>
+            <button className="text-sm text-blue-600 font-medium hover:underline inline-flex items-center gap-1">
+              Know more
+              <span>▸</span>
+            </button>
+          </div>
+
+          <div className="space-y-2">
+            <div className="flex">
+              <span className="text-sm text-gray-500 w-40">Name:</span>
+              <span className="text-sm text-gray-900">{review.customer}</span>
+            </div>
+            <div className="flex">
+              <span className="text-sm text-gray-500 w-40">
+                Orders placed till date:
+              </span>
+              <span className="text-sm text-gray-900">1</span>
+            </div>
+            <div className="flex">
+              <span className="text-sm text-gray-500 w-40">Locality:</span>
+              <span className="text-sm text-gray-900">
+                Medha Consultancy, Hyderabad, Hyderabad (3 kms, 9 mins away)
+              </span>
+            </div>
+          </div>
         </div>
       </div>
     </div>
   );
 }
 
-function TimelineItem({
-  label,
-  timestamp,
-  description,
-  isLast,
+// Review Details View Component (shown in the right panel)
+function ReviewDetailsView({
+  review,
+  replyText,
+  setReplyText,
+  onSendReply,
+  onShowOrderDetails,
 }: {
-  label: string;
-  timestamp: string;
-  description?: string;
-  isLast?: boolean;
+  review: Review;
+  replyText: string;
+  setReplyText: (text: string) => void;
+  onSendReply: () => void;
+  onShowOrderDetails: () => void;
 }) {
   return (
-    <div className="relative flex gap-4 pb-6">
-      {!isLast && (
-        <div className="absolute left-[11px] top-6 bottom-0 w-0.5 bg-gray-200" />
-      )}
-      <div className="relative flex-shrink-0">
-        <div className="h-6 w-6 rounded-full bg-emerald-100 border-2 border-emerald-500 flex items-center justify-center">
-          <div className="h-2 w-2 rounded-full bg-emerald-500" />
+    <>
+      {/* Restaurant Info Header */}
+      <div className="flex items-start justify-between p-6 border-b border-gray-100">
+        <div>
+          <h2 className="text-base font-semibold text-gray-900">
+            Oka Manchi Katha, Ghatkesar
+          </h2>
+          <p className="text-sm text-gray-500 mt-0.5">
+            {getRelativeTime(review.date)}
+          </p>
+          <p className="text-sm text-gray-500">
+            Order ID: {review.orderId || "N/A"}
+          </p>
+        </div>
+        <Button
+          variant="outline"
+          className="text-sm font-medium text-gray-700 border-gray-300"
+          onClick={onShowOrderDetails}
+        >
+          <FileText className="h-4 w-4 mr-2" />
+          Order details
+        </Button>
+      </div>
+
+      {/* Review Content */}
+      <div className="flex-1 overflow-y-auto p-6">
+        {/* Customer Info */}
+        <div className="flex items-start gap-3 mb-6">
+          <Avatar className="h-10 w-10 flex-shrink-0 bg-slate-200">
+            <AvatarFallback className="text-sm font-medium text-slate-600 bg-slate-200">
+              {review.customer.slice(0, 1).toUpperCase()}
+            </AvatarFallback>
+          </Avatar>
+          <div className="flex-1">
+            <div className="flex items-center justify-between">
+              <div>
+                <span className="text-sm font-semibold text-gray-900">
+                  {review.customer}
+                </span>
+                <p className="text-xs text-gray-500">
+                  1 order with you
+                </p>
+              </div>
+              <RatingBadge rating={review.rating} />
+            </div>
+          </div>
+        </div>
+
+        {/* Review Text */}
+        <p className="text-sm text-gray-800 leading-relaxed">
+          {review.comment || review.title}
+        </p>
+
+        {/* Previous Replies */}
+        {review.replies.length > 0 && (
+          <div className="mt-8 space-y-4">
+            <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">
+              Your Replies
+            </p>
+            {review.replies.map((reply) => (
+              <div
+                key={reply.id}
+                className="bg-gray-50 rounded-lg p-4"
+              >
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-medium text-gray-900">
+                    {reply.author}
+                  </span>
+                  <span className="text-xs text-gray-500">
+                    {getRelativeTime(reply.timestamp)}
+                  </span>
+                </div>
+                <p className="text-sm text-gray-700">{reply.text}</p>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Reply Input */}
+      <div className="p-4 border-t border-gray-200">
+        <div className="flex items-center gap-3">
+          <Input
+            placeholder="Type your reply here"
+            value={replyText}
+            onChange={(e) => setReplyText(e.target.value)}
+            className="flex-1 h-11 border-gray-200 rounded-lg text-sm"
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                onSendReply();
+              }
+            }}
+          />
+          <Button
+            onClick={onSendReply}
+            disabled={!replyText.trim()}
+            className="h-11 w-11 p-0 rounded-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-200 disabled:text-gray-400"
+          >
+            <Send className="h-4 w-4" />
+          </Button>
         </div>
       </div>
-      <div className="flex-1 min-w-0 pt-0.5">
-        <p className="text-sm font-semibold text-gray-900">{label}</p>
-        {description && (
-          <p className="text-sm text-gray-600 mt-0.5">{description}</p>
-        )}
-        <p className="text-xs text-gray-500 mt-1">{timestamp}</p>
-      </div>
-    </div>
+    </>
   );
 }
 
 export default function ReviewsPage() {
-  const [reviews, setReviews] = useState<Review[]>(seedReviews);
+  const [reviews] = useState<Review[]>(seedReviews);
   const [selected, setSelected] = useState<Review | null>(reviews[0] ?? null);
   const [searchQuery, setSearchQuery] = useState("");
-  const [ratingFilter, setRatingFilter] = useState<number | null>(null);
-  const [statusFilter, setStatusFilter] = useState<ReviewStatus | null>(null);
-  const [issueTypeFilter, setIssueTypeFilter] = useState<IssueType | null>(
-    null
-  );
-  const [channelFilter, setChannelFilter] = useState<string | null>(null);
-  const [replyDialogOpen, setReplyDialogOpen] = useState(false);
-  const [resolveDialogOpen, setResolveDialogOpen] = useState(false);
-  const [noteDialogOpen, setNoteDialogOpen] = useState(false);
-  const [orderSheetOpen, setOrderSheetOpen] = useState(false);
   const [replyText, setReplyText] = useState("");
-  const [noteText, setNoteText] = useState("");
-  const [resolveNote, setResolveNote] = useState("");
-  const [activeReview, setActiveReview] = useState<Review | null>(null);
+  const [showOrderDetails, setShowOrderDetails] = useState(false);
 
   const filteredReviews = useMemo(() => {
     return reviews.filter((review) => {
@@ -259,775 +535,116 @@ export default function ReviewsPage() {
           return false;
         }
       }
-      if (ratingFilter !== null && review.rating !== ratingFilter) {
-        return false;
-      }
-      if (statusFilter && review.status !== statusFilter) {
-        return false;
-      }
-      if (
-        issueTypeFilter &&
-        !review.issueTypes.includes(issueTypeFilter)
-      ) {
-        return false;
-      }
-      if (channelFilter && review.channel !== channelFilter) {
-        return false;
-      }
       return true;
     });
-  }, [
-    reviews,
-    searchQuery,
-    ratingFilter,
-    statusFilter,
-    issueTypeFilter,
-    channelFilter,
-  ]);
+  }, [reviews, searchQuery]);
 
-  const handleReply = (review: Review) => {
-    setActiveReview(review);
+  const handleSendReply = () => {
+    if (!replyText.trim() || !selected) return;
+    // Handle reply submission
+    console.log("Sending reply:", replyText);
     setReplyText("");
-    setReplyDialogOpen(true);
   };
 
-  const handleResolve = (review: Review) => {
-    setActiveReview(review);
-    setResolveNote("");
-    setResolveDialogOpen(true);
+  const handleSelectReview = (review: Review) => {
+    setSelected(review);
+    setShowOrderDetails(false); // Reset to review view when selecting a new review
   };
-
-  const handleAddNote = (review: Review) => {
-    setActiveReview(review);
-    setNoteText("");
-    setNoteDialogOpen(true);
-  };
-
-  const handleViewOrder = (review: Review) => {
-    setActiveReview(review);
-    setOrderSheetOpen(true);
-  };
-
-  const submitReply = () => {
-    if (!activeReview || !replyText.trim()) return;
-
-    const newReply: Reply = {
-      id: `reply-${Date.now()}`,
-      text: replyText,
-      timestamp: new Date().toISOString(),
-      author: "Partner Team",
-    };
-
-    setReviews((prev) =>
-      prev.map((r) =>
-        r.id === activeReview.id
-          ? {
-            ...r,
-            replies: [...r.replies, newReply],
-            status: r.status === "NEW" ? "RESPONDED" : r.status,
-          }
-          : r
-      )
-    );
-
-    if (selected?.id === activeReview.id) {
-      setSelected({
-        ...selected,
-        replies: [...selected.replies, newReply],
-        status: selected.status === "NEW" ? "RESPONDED" : selected.status,
-      });
-    }
-
-    setReplyText("");
-    setReplyDialogOpen(false);
-    setActiveReview(null);
-  };
-
-  const submitResolve = () => {
-    if (!activeReview) return;
-
-    setReviews((prev) =>
-      prev.map((r) =>
-        r.id === activeReview.id
-          ? {
-            ...r,
-            status: "RESOLVED",
-            notes: resolveNote.trim()
-              ? [
-                ...r.notes,
-                {
-                  id: `note-${Date.now()}`,
-                  text: resolveNote,
-                  timestamp: new Date().toISOString(),
-                  author: "Partner Team",
-                },
-              ]
-              : r.notes,
-          }
-          : r
-      )
-    );
-
-    if (selected?.id === activeReview.id) {
-      setSelected({
-        ...selected,
-        status: "RESOLVED",
-        notes: resolveNote.trim()
-          ? [
-            ...selected.notes,
-            {
-              id: `note-${Date.now()}`,
-              text: resolveNote,
-              timestamp: new Date().toISOString(),
-              author: "Partner Team",
-            },
-          ]
-          : selected.notes,
-      });
-    }
-
-    setResolveNote("");
-    setResolveDialogOpen(false);
-    setActiveReview(null);
-  };
-
-  const submitNote = () => {
-    if (!activeReview || !noteText.trim()) return;
-
-    const newNote: InternalNote = {
-      id: `note-${Date.now()}`,
-      text: noteText,
-      timestamp: new Date().toISOString(),
-      author: "Partner Team",
-    };
-
-    setReviews((prev) =>
-      prev.map((r) =>
-        r.id === activeReview.id
-          ? { ...r, notes: [...r.notes, newNote] }
-          : r
-      )
-    );
-
-    if (selected?.id === activeReview.id) {
-      setSelected({
-        ...selected,
-        notes: [...selected.notes, newNote],
-      });
-    }
-
-    setNoteText("");
-    setNoteDialogOpen(false);
-    setActiveReview(null);
-  };
-
-  const changeStatus = (newStatus: ReviewStatus) => {
-    if (!selected) return;
-
-    setReviews((prev) =>
-      prev.map((r) => (r.id === selected.id ? { ...r, status: newStatus } : r))
-    );
-
-    setSelected({ ...selected, status: newStatus });
-  };
-
-  const clearFilters = () => {
-    setSearchQuery("");
-    setRatingFilter(null);
-    setStatusFilter(null);
-    setIssueTypeFilter(null);
-    setChannelFilter(null);
-  };
-
-  const hasActiveFilters =
-    searchQuery ||
-    ratingFilter !== null ||
-    statusFilter ||
-    issueTypeFilter ||
-    channelFilter;
 
   return (
-    <AppShell>
-      <div className="space-y-6">
-        {/* Top Search & Filter Section */}
-        <Card className="rounded-2xl border border-gray-100 bg-white shadow-[0_2px_8px_rgba(0,0,0,0.05)]">
-          <CardHeader>
-            <div className="space-y-3">
-              <div>
-                <CardTitle className="text-gray-900">Customer Reviews</CardTitle>
-                <CardDescription className="text-gray-500">
-                  Manage feedback and support requests
-                </CardDescription>
-              </div>
+    <AppShell noPadding>
+      <div className="flex flex-col h-[calc(100vh-64px)]">
+        {/* Top Header Bar */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 bg-white">
+          <div className="flex items-center gap-2">
+            <h1 className="text-sm text-gray-700">
+              Delivery reviews are only visible to you
+            </h1>
+            <Info className="h-4 w-4 text-gray-400" />
+          </div>
 
-              {/* Main Search Bar */}
+          <div className="flex items-center gap-3">
+            {/* Filter Button */}
+            <Button
+              variant="outline"
+              className="text-sm font-medium text-gray-700 border-gray-300 hover:bg-gray-50"
+            >
+              <SlidersHorizontal className="h-4 w-4 mr-2" />
+              Filter
+            </Button>
+
+            {/* FAQs Link */}
+            <Button
+              variant="ghost"
+              className="text-sm font-medium text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+            >
+              <HelpCircle className="h-4 w-4 mr-1" />
+              FAQs
+            </Button>
+          </div>
+        </div>
+
+        {/* Main Content */}
+        <div className="flex flex-1 overflow-hidden">
+          {/* Left Panel - Review List */}
+          <div className="w-[460px] border-r border-gray-200 flex flex-col bg-white">
+            {/* Search Bar */}
+            <div className="p-4 border-b border-gray-100">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                 <Input
-                  placeholder="Search reviews or customers..."
+                  placeholder="Search reviews"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-9 rounded-xl h-11 text-base"
+                  className="pl-9 h-10 border-gray-200 rounded-md text-sm"
                 />
               </div>
-
-              {/* Filter Controls */}
-              <div className="space-y-3 pt-2">
-                <div className="flex items-center justify-between">
-                  <p className="text-xs font-medium text-gray-700 uppercase tracking-wide">
-                    Filters
-                  </p>
-                  {hasActiveFilters && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={clearFilters}
-                      className="h-6 text-xs text-gray-500 hover:text-gray-700"
-                    >
-                      Clear all
-                    </Button>
-                  )}
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                  {/* Rating Filter */}
-                  <div>
-                    <p className="text-xs text-gray-600 mb-1.5">Rating</p>
-                    <div className="flex flex-wrap gap-1.5">
-                      {[5, 4, 3, 2, 1].map((rating) => (
-                        <Button
-                          key={rating}
-                          variant={ratingFilter === rating ? "default" : "outline"}
-                          size="sm"
-                          onClick={() =>
-                            setRatingFilter(
-                              ratingFilter === rating ? null : rating
-                            )
-                          }
-                          className={`h-7 text-xs ${ratingFilter === rating
-                            ? "bg-emerald-600 text-white"
-                            : ""
-                            }`}
-                        >
-                          {rating} ★
-                        </Button>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Status Filter */}
-                  <div>
-                    <p className="text-xs text-gray-600 mb-1.5">Status</p>
-                    <div className="flex flex-wrap gap-1.5">
-                      {(["NEW", "RESPONDED", "RESOLVED"] as ReviewStatus[]).map(
-                        (status) => (
-                          <Button
-                            key={status}
-                            variant={statusFilter === status ? "default" : "outline"}
-                            size="sm"
-                            onClick={() =>
-                              setStatusFilter(
-                                statusFilter === status ? null : status
-                              )
-                            }
-                            className={`h-7 text-xs border ${statusFilter === status
-                              ? "bg-emerald-600 text-white"
-                              : ""
-                              }`}
-                          >
-                            {status}
-                          </Button>
-                        )
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Issue Type Filter */}
-                  <div>
-                    <p className="text-xs text-gray-600 mb-1.5">Issue Type</p>
-                    <div className="flex flex-wrap gap-1.5">
-                      {(["Delay", "Packaging", "Missing items", "Taste"] as IssueType[]).map(
-                        (issue) => (
-                          <Button
-                            key={issue}
-                            variant={issueTypeFilter === issue ? "default" : "outline"}
-                            size="sm"
-                            onClick={() =>
-                              setIssueTypeFilter(
-                                issueTypeFilter === issue ? null : issue
-                              )
-                            }
-                            className={`h-7 text-xs ${issueTypeFilter === issue
-                              ? "bg-emerald-600 text-white"
-                              : ""
-                              }`}
-                          >
-                            {issue}
-                          </Button>
-                        )
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Channel Filter */}
-                  <div>
-                    <p className="text-xs text-gray-600 mb-1.5">Source</p>
-                    <div className="flex flex-wrap gap-1.5">
-                      {["App", "WhatsApp", "Website", "In-person"].map(
-                        (channel) => (
-                          <Button
-                            key={channel}
-                            variant={channelFilter === channel ? "default" : "outline"}
-                            size="sm"
-                            onClick={() =>
-                              setChannelFilter(
-                                channelFilter === channel ? null : channel
-                              )
-                            }
-                            className={`h-7 text-xs ${channelFilter === channel
-                              ? "bg-emerald-600 text-white"
-                              : ""
-                              }`}
-                          >
-                            {channel}
-                          </Button>
-                        )
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
             </div>
-          </CardHeader>
-        </Card>
 
-        {/* Main Content Area */}
-        <div className="grid lg:grid-cols-3 gap-6">
-          {/* Review List - Now in a scrollable panel */}
-          <Card className="rounded-2xl border border-gray-100 bg-white shadow-[0_2px_8px_rgba(0,0,0,0.05)] lg:col-span-1">
-            <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle className="text-gray-900 text-sm">
-                    Reviews ({filteredReviews.length})
-                  </CardTitle>
-                  <CardDescription className="text-xs text-gray-500">
-                    {filteredReviews.filter(r => r.status === "NEW").length} new • respond in under 5 mins.
-                  </CardDescription>
-                </div>
-                <Badge className="text-xs font-normal bg-gray-100 text-gray-700">
-                  {filteredReviews.filter(r => r.status === "NEW").length} new
-                </Badge>
-              </div>
-            </CardHeader>
-            <CardContent className="p-4">
-              <div className="space-y-2 h-[calc(100vh-280px)] overflow-y-auto pr-2">
-                {filteredReviews.length === 0 ? (
-                  <div className="py-8 text-center text-gray-500">
-                    <p className="text-sm">No reviews match your filters</p>
-                  </div>
-                ) : (
-                  filteredReviews.map((review) => (
-                    <ReviewCard
-                      key={review.id}
-                      review={review}
-                      isActive={review.id === selected?.id}
-                      onSelect={setSelected}
-                      onReply={handleReply}
-                      onResolve={handleResolve}
-                      onAddNote={handleAddNote}
-                      onViewOrder={handleViewOrder}
-                    />
-                  ))
-                )}
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Review Details - REMOVED SEARCH BAR & FILTER */}
-          <Card className="rounded-2xl border border-gray-100 bg-white shadow-[0_2px_8px_rgba(0,0,0,0.05)] lg:col-span-2">
-            <CardHeader>
-              <CardTitle className="text-gray-900">Review Details</CardTitle>
-              <CardDescription className="text-gray-500">
-                Full context and conversation history
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {selected ? (
-                <div className="space-y-6">
-                  {/* Customer Info */}
-                  <div className="flex items-start gap-4">
-                    <Avatar className="h-12 w-12">
-                      <AvatarFallback className="text-base font-semibold">
-                        {selected.customer.slice(0, 2).toUpperCase()}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <p className="text-lg font-semibold text-gray-900">
-                          {selected.customer}
-                        </p>
-                        <Badge
-                          className={`rounded-full text-xs font-medium border ${STATUS_COLORS[selected.status]}`}
-                        >
-                          {selected.status}
-                        </Badge>
-                        <Badge className="rounded-full bg-blue-50 text-blue-700 text-xs">
-                          {selected.channel}
-                        </Badge>
-                      </div>
-                      <div className="flex items-center gap-2 mt-2">
-                        <StarRating rating={selected.rating} size="lg" />
-                        <span className="text-sm text-gray-500">({selected.rating}/5)</span>
-                      </div>
-                      <p className="text-sm text-gray-500 mt-1">
-                        Posted on {selected.date}
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Review Summary */}
-                  <div className="rounded-xl border border-gray-100 bg-gray-50 p-4">
-                    <p className="text-xs uppercase tracking-wide text-gray-500 mb-2">
-                      Summary
-                    </p>
-                    <p className="text-base font-semibold text-gray-900">
-                      {selected.title}
-                    </p>
-                  </div>
-
-                  {/* Review Detail */}
-                  <div className="rounded-xl border border-gray-100 bg-white p-4 shadow-[0_2px_8px_rgba(0,0,0,0.05)]">
-                    <p className="text-xs uppercase tracking-wide text-gray-500 mb-2">
-                      Full Review
-                    </p>
-                    <p className="text-sm text-gray-700 leading-relaxed">
-                      {selected.comment}
-                    </p>
-                  </div>
-
-                  {/* Issue Types */}
-                  {selected.issueTypes.length > 0 && (
-                    <div>
-                      <p className="text-xs uppercase tracking-wide text-gray-500 mb-2">
-                        Issue Types
-                      </p>
-                      <div className="flex flex-wrap gap-2">
-                        {selected.issueTypes.map((issue) => (
-                          <Badge
-                            key={issue}
-                            className={`text-xs ${ISSUE_TYPE_COLORS[issue]}`}
-                          >
-                            {issue}
-                          </Badge>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Timeline */}
-                  <div>
-                    <p className="text-xs uppercase tracking-wide text-gray-500 mb-4">
-                      Timeline
-                    </p>
-                    <div className="space-y-0">
-                      <TimelineItem
-                        label="Review Posted"
-                        timestamp={formatDate(selected.date)}
-                        description={selected.title}
-                      />
-                      {selected.replies.map((reply, idx) => (
-                        <TimelineItem
-                          key={reply.id}
-                          label={`Reply from ${reply.author}`}
-                          timestamp={formatDate(reply.timestamp)}
-                          description={reply.text}
-                          isLast={
-                            idx === selected.replies.length - 1 &&
-                            selected.notes.length === 0 &&
-                            selected.status !== "RESOLVED"
-                          }
-                        />
-                      ))}
-                      {selected.status === "RESOLVED" && (
-                        <TimelineItem
-                          label="Marked as Resolved"
-                          timestamp={
-                            selected.replies.length > 0
-                              ? formatDate(
-                                selected.replies[selected.replies.length - 1]
-                                  .timestamp
-                              )
-                              : formatDate(selected.date)
-                          }
-                          isLast={selected.notes.length === 0}
-                        />
-                      )}
-                      {selected.notes.map((note, idx) => (
-                        <TimelineItem
-                          key={note.id}
-                          label={`Internal Note from ${note.author}`}
-                          timestamp={formatDate(note.timestamp)}
-                          description={note.text}
-                          isLast={idx === selected.notes.length - 1}
-                        />
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Partner Replies */}
-                  {selected.replies.length > 0 && (
-                    <div>
-                      <p className="text-xs uppercase tracking-wide text-gray-500 mb-3">
-                        Partner Replies ({selected.replies.length})
-                      </p>
-                      <div className="space-y-3">
-                        {selected.replies.map((reply) => (
-                          <div
-                            key={reply.id}
-                            className="rounded-xl border border-gray-100 bg-white p-4 shadow-[0_2px_8px_rgba(0,0,0,0.05)]"
-                          >
-                            <div className="flex items-center justify-between mb-2">
-                              <p className="text-sm font-semibold text-gray-900">
-                                {reply.author}
-                              </p>
-                              <p className="text-xs text-gray-500">
-                                {formatDate(reply.timestamp)}
-                              </p>
-                            </div>
-                            <p className="text-sm text-gray-700">{reply.text}</p>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Internal Notes */}
-                  {selected.notes.length > 0 && (
-                    <div>
-                      <p className="text-xs uppercase tracking-wide text-gray-500 mb-3">
-                        Internal Notes ({selected.notes.length})
-                      </p>
-                      <div className="space-y-3">
-                        {selected.notes.map((note) => (
-                          <div
-                            key={note.id}
-                            className="rounded-xl border border-amber-100 bg-amber-50 p-4"
-                          >
-                            <div className="flex items-center justify-between mb-2">
-                              <p className="text-sm font-semibold text-gray-900">
-                                {note.author}
-                              </p>
-                              <p className="text-xs text-gray-500">
-                                {formatDate(note.timestamp)}
-                              </p>
-                            </div>
-                            <p className="text-sm text-gray-700">{note.text}</p>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Actions */}
-                  <div className="flex flex-wrap gap-2 pt-4 border-t border-gray-100">
-                    <Button
-                      variant="default"
-                      onClick={() => handleReply(selected)}
-                      className="bg-emerald-600 hover:bg-emerald-700"
-                    >
-                      <MessageSquare className="h-4 w-4 mr-2" />
-                      Reply
-                    </Button>
-                    {selected.status !== "RESOLVED" && (
-                      <Button
-                        variant="outline"
-                        onClick={() => handleResolve(selected)}
-                      >
-                        <CheckCircle2 className="h-4 w-4 mr-2" />
-                        Mark Resolved
-                      </Button>
-                    )}
-                    {selected.status === "RESOLVED" && (
-                      <Button
-                        variant="outline"
-                        onClick={() => changeStatus("RESPONDED")}
-                      >
-                        Re-open
-                      </Button>
-                    )}
-                    <Button
-                      variant="outline"
-                      onClick={() => handleAddNote(selected)}
-                    >
-                      <FileText className="h-4 w-4 mr-2" />
-                      Add Note
-                    </Button>
-                    {selected.orderId && (
-                      <Button
-                        variant="outline"
-                        onClick={() => handleViewOrder(selected)}
-                      >
-                        <ShoppingBag className="h-4 w-4 mr-2" />
-                        View Order
-                      </Button>
-                    )}
-                  </div>
+            {/* Review List */}
+            <div className="flex-1 overflow-y-auto">
+              {filteredReviews.length === 0 ? (
+                <div className="py-12 text-center text-gray-500">
+                  <p className="text-sm">No reviews found</p>
                 </div>
               ) : (
-                <div className="py-20 text-center text-gray-500">
-                  <p className="text-sm">Select a review to see details</p>
-                </div>
+                filteredReviews.map((review) => (
+                  <ReviewListItem
+                    key={review.id}
+                    review={review}
+                    isActive={review.id === selected?.id}
+                    onSelect={handleSelectReview}
+                  />
+                ))
               )}
-            </CardContent>
-          </Card>
+            </div>
+          </div>
+
+          {/* Right Panel - Review Details or Order Details */}
+          <div className="flex-1 flex flex-col bg-white">
+            {selected ? (
+              showOrderDetails ? (
+                <OrderDetailsView
+                  review={selected}
+                  onClose={() => setShowOrderDetails(false)}
+                />
+              ) : (
+                <ReviewDetailsView
+                  review={selected}
+                  replyText={replyText}
+                  setReplyText={setReplyText}
+                  onSendReply={handleSendReply}
+                  onShowOrderDetails={() => setShowOrderDetails(true)}
+                />
+              )
+            ) : (
+              <div className="flex-1 flex items-center justify-center text-gray-500">
+                <p className="text-sm">Select a review to see details</p>
+              </div>
+            )}
+          </div>
         </div>
       </div>
-
-      {/* Reply Dialog */}
-      <Dialog open={replyDialogOpen} onOpenChange={setReplyDialogOpen}>
-        <DialogContent className="rounded-2xl">
-          <DialogHeader>
-            <DialogTitle>Reply to Customer</DialogTitle>
-            <DialogDescription>
-              Send a response to {activeReview?.customer}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <p className="text-sm font-medium text-gray-700 mb-2">
-                Your Reply
-              </p>
-              <Textarea
-                placeholder="Type your response here..."
-                value={replyText}
-                onChange={(e) => setReplyText(e.target.value)}
-                className="min-h-32 rounded-xl"
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setReplyDialogOpen(false)}
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={submitReply}
-              className="bg-emerald-600 hover:bg-emerald-700"
-              disabled={!replyText.trim()}
-            >
-              Send Reply
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Resolve Dialog */}
-      <Dialog open={resolveDialogOpen} onOpenChange={setResolveDialogOpen}>
-        <DialogContent className="rounded-2xl">
-          <DialogHeader>
-            <DialogTitle>Mark as Resolved</DialogTitle>
-            <DialogDescription>
-              Mark this review as resolved. Add an optional internal note.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <p className="text-sm font-medium text-gray-700 mb-2">
-                Internal Note (Optional)
-              </p>
-              <Textarea
-                placeholder="Add any notes about the resolution..."
-                value={resolveNote}
-                onChange={(e) => setResolveNote(e.target.value)}
-                className="min-h-24 rounded-xl"
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setResolveDialogOpen(false)}
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={submitResolve}
-              className="bg-emerald-600 hover:bg-emerald-700"
-            >
-              Mark Resolved
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Add Note Dialog */}
-      <Dialog open={noteDialogOpen} onOpenChange={setNoteDialogOpen}>
-        <DialogContent className="rounded-2xl">
-          <DialogHeader>
-            <DialogTitle>Add Internal Note</DialogTitle>
-            <DialogDescription>
-              Add a note visible only to your team
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <p className="text-sm font-medium text-gray-700 mb-2">Note</p>
-              <Textarea
-                placeholder="Type your internal note here..."
-                value={noteText}
-                onChange={(e) => setNoteText(e.target.value)}
-                className="min-h-32 rounded-xl"
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setNoteDialogOpen(false)}
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={submitNote}
-              className="bg-emerald-600 hover:bg-emerald-700"
-              disabled={!noteText.trim()}
-            >
-              Add Note
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Order Details Sheet */}
-      <Sheet open={orderSheetOpen} onOpenChange={setOrderSheetOpen}>
-        <SheetContent className="rounded-l-2xl">
-          <SheetHeader>
-            <SheetTitle>Order Details</SheetTitle>
-            <SheetDescription>
-              Order information for {activeReview?.orderId}
-            </SheetDescription>
-          </SheetHeader>
-          <div className="mt-6 space-y-4">
-            <div className="rounded-xl border border-gray-100 bg-gray-50 p-4">
-              <p className="text-xs uppercase tracking-wide text-gray-500 mb-2">
-                Order ID
-              </p>
-              <p className="text-lg font-semibold text-gray-900">
-                {activeReview?.orderId}
-              </p>
-            </div>
-            <div className="rounded-xl border border-gray-100 bg-white p-4 shadow-[0_2px_8px_rgba(0,0,0,0.05)]">
-              <p className="text-sm text-gray-600">
-                Full order details would be displayed here, including items,
-                quantities, pricing, and pickup information.
-              </p>
-            </div>
-          </div>
-        </SheetContent>
-      </Sheet>
     </AppShell>
   );
 }
