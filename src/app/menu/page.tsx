@@ -1,37 +1,26 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { Search, Plus, Filter, MoreVertical, Package, Edit2, Trash2, Eye } from "lucide-react";
+import {
+  Search,
+  Plus,
+  ChevronUp,
+  ChevronDown,
+  MoreVertical,
+  Clock,
+  ArrowRight,
+  Filter,
+  ChevronRight,
+  Trash2,
+  Edit2,
+  Copy,
+  Eye,
+  EyeOff,
+} from "lucide-react";
 import { AppShell } from "@/components/layout/app-shell";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { Switch } from "@/components/ui/switch";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -40,526 +29,758 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
+import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { categories } from "@/data/categories";
-import { inventory as seedInventory } from "@/data/inventory";
+import { Badge } from "@/components/ui/badge";
+import { Textarea } from "@/components/ui/textarea";
+import { categories as seedCategories, type Category } from "@/data/categories";
+import { inventory as seedInventory, type InventoryItem } from "@/data/inventory";
 
 export default function MenuPage() {
+  // State
   const [searchQuery, setSearchQuery] = useState("");
-  const [activeTab, setActiveTab] = useState("menu");
-  const [stockState, setStockState] = useState<Record<string, boolean>>(() =>
-    seedInventory.reduce(
-      (acc, item) => ({
-        ...acc,
-        [item.id]: item.inStock,
-      }),
-      {}
-    )
-  );
-  const [prices, setPrices] = useState<Record<string, number>>(() =>
-    seedInventory.reduce(
-      (acc, item) => ({
-        ...acc,
-        [item.id]: item.price,
-      }),
-      {}
-    )
-  );
+  const [categories, setCategories] = useState<Category[]>(seedCategories);
+  const [inventory, setInventory] = useState<InventoryItem[]>(seedInventory);
+  const [selectedCategory, setSelectedCategory] = useState(categories[0]?.id || "");
+  const [expandedCategories, setExpandedCategories] = useState<string[]>([categories[0]?.id || ""]);
+  
+  // Dialog states
+  const [addCategoryOpen, setAddCategoryOpen] = useState(false);
+  const [addItemOpen, setAddItemOpen] = useState(false);
+  const [editItemOpen, setEditItemOpen] = useState(false);
+  const [selectedItem, setSelectedItem] = useState<InventoryItem | null>(null);
+  
+  // Form states
+  const [newCategoryName, setNewCategoryName] = useState("");
+  const [newCategoryDesc, setNewCategoryDesc] = useState("");
+  const [newItemName, setNewItemName] = useState("");
+  const [newItemPrice, setNewItemPrice] = useState("");
+  const [newItemUnit, setNewItemUnit] = useState("");
+  const [newItemIsVeg, setNewItemIsVeg] = useState(true);
 
-  const inventory = useMemo(
-    () =>
-      seedInventory.map((item) => ({
-        ...item,
-        price: prices[item.id] ?? item.price,
-        inStock: stockState[item.id] ?? item.inStock,
-      })),
-    [prices, stockState]
-  );
+  // Computed
+  const selectedCategoryData = categories.find((c) => c.id === selectedCategory);
+  const categoryItems = inventory.filter((item) => item.categoryId === selectedCategory);
 
-  const filteredMenuItems = useMemo(() => {
-    if (!searchQuery.trim()) return inventory;
+  const filteredItems = useMemo(() => {
+    if (!searchQuery.trim()) return categoryItems;
     const q = searchQuery.toLowerCase();
-    return inventory.filter(
-      (item) =>
-        item.name.toLowerCase().includes(q) ||
-        item.category.toLowerCase().includes(q)
-    );
-  }, [inventory, searchQuery]);
+    return categoryItems.filter((item) => item.name.toLowerCase().includes(q));
+  }, [categoryItems, searchQuery]);
 
-  const groupedByCategory = useMemo(() => {
-    return categories.map((category) => ({
-      ...category,
-      items: inventory.filter((item) => item.categoryId === category.id),
-    }));
-  }, [inventory]);
+  // Handlers
+  const toggleCategory = (categoryId: string) => {
+    setExpandedCategories((prev) =>
+      prev.includes(categoryId)
+        ? prev.filter((id) => id !== categoryId)
+        : [...prev, categoryId]
+    );
+  };
+
+  const toggleItemStock = (itemId: string) => {
+    setInventory((prev) =>
+      prev.map((item) =>
+        item.id === itemId ? { ...item, inStock: !item.inStock } : item
+      )
+    );
+  };
+
+  const addCategory = () => {
+    if (!newCategoryName.trim()) return;
+    const newCategory: Category = {
+      id: `cat-${Date.now()}`,
+      title: newCategoryName,
+      description: newCategoryDesc,
+    };
+    setCategories((prev) => [...prev, newCategory]);
+    setNewCategoryName("");
+    setNewCategoryDesc("");
+    setAddCategoryOpen(false);
+  };
+
+  const deleteCategory = (categoryId: string) => {
+    setCategories((prev) => prev.filter((c) => c.id !== categoryId));
+    setInventory((prev) => prev.filter((item) => item.categoryId !== categoryId));
+    if (selectedCategory === categoryId) {
+      setSelectedCategory(categories[0]?.id || "");
+    }
+  };
+
+  const addItem = () => {
+    if (!newItemName.trim() || !newItemPrice) return;
+    const newItem: InventoryItem = {
+      id: `INV-${Date.now()}`,
+      name: newItemName,
+      category: selectedCategoryData?.title || "",
+      categoryId: selectedCategory,
+      price: parseFloat(newItemPrice),
+      unit: newItemUnit || "1 plate",
+      inStock: true,
+      isVeg: newItemIsVeg,
+    };
+    setInventory((prev) => [...prev, newItem]);
+    setNewItemName("");
+    setNewItemPrice("");
+    setNewItemUnit("");
+    setNewItemIsVeg(true);
+    setAddItemOpen(false);
+  };
+
+  const updateItem = () => {
+    if (!selectedItem) return;
+    setInventory((prev) =>
+      prev.map((item) =>
+        item.id === selectedItem.id ? selectedItem : item
+      )
+    );
+    setEditItemOpen(false);
+    setSelectedItem(null);
+  };
+
+  const deleteItem = (itemId: string) => {
+    setInventory((prev) => prev.filter((item) => item.id !== itemId));
+  };
+
+  const duplicateItem = (item: InventoryItem) => {
+    const newItem: InventoryItem = {
+      ...item,
+      id: `INV-${Date.now()}`,
+      name: `${item.name} (Copy)`,
+    };
+    setInventory((prev) => [...prev, newItem]);
+  };
 
   return (
-    <AppShell>
-      <div className="space-y-6">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Menu & Inventory</h1>
-            <p className="text-sm text-gray-500">
-              Manage your products, categories, and stock levels
-            </p>
+    <AppShell noPadding>
+      <div className="flex flex-col h-[calc(100vh-64px)]">
+        {/* Search and Actions Bar */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 bg-white">
+          <div className="relative w-[480px]">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <Input
+              placeholder="Search"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10 h-11 border-gray-300 rounded-lg text-sm"
+            />
           </div>
-          
           <div className="flex items-center gap-3">
-            <Dialog>
-              <DialogTrigger asChild>
-                <Button className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-full">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add Item
+            <Button variant="outline" className="h-10 text-sm font-medium border-gray-300">
+              <Filter className="h-4 w-4 mr-2" />
+              Filters
+            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" className="h-10 text-sm font-medium border-gray-300">
+                  Actions
+                  <ChevronDown className="h-4 w-4 ml-2" />
                 </Button>
-              </DialogTrigger>
-              <DialogContent className="sm:max-w-md rounded-2xl">
-                <DialogHeader>
-                  <DialogTitle>Add New Item</DialogTitle>
-                  <DialogDescription>
-                    Add a new product to your menu
-                  </DialogDescription>
-                </DialogHeader>
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <label htmlFor="name" className="text-sm font-medium text-gray-700">
-                      Item Name
-                    </label>
-                    <Input id="name" placeholder="e.g., Organic Tomatoes" />
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <label htmlFor="category" className="text-sm font-medium text-gray-700">
-                        Category
-                      </label>
-                      <Select>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select category" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {categories.map((category) => (
-                            <SelectItem key={category.id} value={category.id}>
-                              {category.title}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-2">
-                      <label htmlFor="price" className="text-sm font-medium text-gray-700">
-                        Price (₹)
-                      </label>
-                      <Input id="price" type="number" placeholder="299" />
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <label htmlFor="unit" className="text-sm font-medium text-gray-700">
-                      Unit
-                    </label>
-                    <Input id="unit" placeholder="e.g., 500g, 1kg, 1 piece" />
-                  </div>
-                  <div className="space-y-2">
-                    <label htmlFor="description" className="text-sm font-medium text-gray-700">
-                      Description (Optional)
-                    </label>
-                    <Input id="description" placeholder="Brief description" />
-                  </div>
-                </div>
-                <DialogFooter>
-                  <Button variant="outline">Cancel</Button>
-                  <Button className="bg-emerald-600 hover:bg-emerald-700">
-                    Save Item
-                  </Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem>Bulk edit prices</DropdownMenuItem>
+                <DropdownMenuItem>Export menu</DropdownMenuItem>
+                <DropdownMenuItem>Import menu</DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem>Mark all in stock</DropdownMenuItem>
+                <DropdownMenuItem>Mark all out of stock</DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <Button variant="outline" className="h-10 text-sm font-medium border-gray-300">
+              Dining Menu
+            </Button>
+            <Button className="h-10 bg-red-500 hover:bg-red-600 text-white text-sm font-semibold px-5">
+              Submit Changes
+            </Button>
           </div>
         </div>
 
-        {/* Search & Filter */}
-        <Card className="rounded-2xl border border-gray-100 bg-white shadow-[0_2px_8px_rgba(0,0,0,0.05)]">
-          <CardContent className="p-5">
-            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+        {/* Main Content - Two Panel Layout */}
+        <div className="flex flex-1 overflow-hidden">
+          {/* Left Panel - Categories */}
+          <div className="w-[480px] border-r border-gray-200 bg-white flex flex-col">
+            {/* Categories Header */}
+            <div className="px-5 py-4 border-b border-gray-100">
+              <h2 className="text-sm font-semibold text-gray-900">
+                Categories ({categories.length})
+              </h2>
+            </div>
+
+            {/* Add Category */}
+            <button
+              onClick={() => setAddCategoryOpen(true)}
+              className="px-5 py-3 text-left text-sm text-blue-600 font-medium flex items-center gap-2 hover:bg-gray-50 border-b border-gray-100"
+            >
+              <Plus className="h-4 w-4" />
+              Add Category
+            </button>
+
+            {/* Categories List */}
+            <div className="flex-1 overflow-y-auto">
+              {categories.map((category) => {
+                const itemCount = inventory.filter(
+                  (item) => item.categoryId === category.id
+                ).length;
+                const isExpanded = expandedCategories.includes(category.id);
+                const isSelected = selectedCategory === category.id;
+
+                return (
+                  <div key={category.id}>
+                    {/* Category Item */}
+                    <div
+                      className={`flex items-center justify-between px-5 py-4 cursor-pointer hover:bg-gray-50 border-b border-gray-100 ${
+                        isSelected && !isExpanded ? "bg-blue-50" : ""
+                      }`}
+                      onClick={() => {
+                        setSelectedCategory(category.id);
+                        if (!isExpanded) toggleCategory(category.id);
+                      }}
+                    >
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium text-gray-900">
+                          {category.title} ({itemCount})
+                        </span>
+                        <Clock className="h-4 w-4 text-gray-400" />
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <button
+                              className="p-1.5 hover:bg-gray-100 rounded"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <MoreVertical className="h-4 w-4 text-gray-400" />
+                            </button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem>
+                              <Edit2 className="h-4 w-4 mr-2" />
+                              Edit Category
+                            </DropdownMenuItem>
+                            <DropdownMenuItem>
+                              <EyeOff className="h-4 w-4 mr-2" />
+                              Mark Out of Stock
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              className="text-red-600"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                deleteCategory(category.id);
+                              }}
+                            >
+                              <Trash2 className="h-4 w-4 mr-2" />
+                              Delete Category
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                        <button
+                          className="p-1.5 hover:bg-gray-100 rounded"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            toggleCategory(category.id);
+                          }}
+                        >
+                          {isExpanded ? (
+                            <ChevronUp className="h-4 w-4 text-gray-400" />
+                          ) : (
+                            <ChevronDown className="h-4 w-4 text-gray-400" />
+                          )}
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Subcategory (expanded) */}
+                    {isExpanded && (
+                      <div className="bg-gray-50/50">
+                        <div
+                          className={`relative pl-10 pr-5 py-3 cursor-pointer hover:bg-gray-100 ${
+                            isSelected ? "bg-white" : ""
+                          }`}
+                          onClick={() => setSelectedCategory(category.id)}
+                        >
+                          {isSelected && (
+                            <div className="absolute left-0 top-0 bottom-0 w-1 bg-blue-600" />
+                          )}
+                          <span className="text-sm text-gray-700">
+                            {category.title} ({itemCount})
+                          </span>
+                        </div>
+                        <button className="pl-10 pr-5 py-3 text-left text-sm text-blue-600 font-medium flex items-center gap-2 hover:bg-gray-100 w-full">
+                          <Plus className="h-4 w-4" />
+                          Add Subcategory
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Go to Add Ons */}
+            <div className="border-t border-gray-200 px-5 py-4">
+              <button className="text-sm text-blue-600 font-medium flex items-center justify-between w-full hover:underline">
+                Go to Add Ons
+                <ArrowRight className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+
+          {/* Right Panel - Items */}
+          <div className="flex-1 bg-white flex flex-col overflow-hidden">
+            {/* Category Header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+              <h2 className="text-base font-semibold text-gray-900">
+                {selectedCategoryData?.title || "Category"} ({filteredItems.length})
+              </h2>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button className="p-1.5 hover:bg-gray-100 rounded">
+                    <MoreVertical className="h-5 w-5 text-gray-400" />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem>Edit Category</DropdownMenuItem>
+                  <DropdownMenuItem>Mark all items out of stock</DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem className="text-red-600">Delete Category</DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+
+            {/* Add Item Options */}
+            <div className="flex items-center gap-8 px-6 py-4 border-b border-gray-200">
+              <button
+                onClick={() => setAddItemOpen(true)}
+                className="text-sm text-blue-600 font-medium flex items-center gap-2 hover:underline"
+              >
+                <Plus className="h-4 w-4" />
+                Add New Item
+              </button>
+              <button className="text-sm text-blue-600 font-medium flex items-center gap-2 hover:underline">
+                <Plus className="h-4 w-4" />
+                Map existing item
+              </button>
+            </div>
+
+            {/* Items List */}
+            <div className="flex-1 overflow-y-auto">
+              {filteredItems.length === 0 ? (
+                <div className="flex flex-col items-center justify-center h-full text-center p-8">
+                  <div className="w-20 h-20 rounded-full bg-gray-100 flex items-center justify-center mb-4">
+                    <Search className="h-10 w-10 text-gray-300" />
+                  </div>
+                  <p className="text-gray-600 font-medium text-lg">No items found</p>
+                  <p className="text-sm text-gray-400 mt-1">
+                    Add items to this category to get started
+                  </p>
+                  <Button
+                    onClick={() => setAddItemOpen(true)}
+                    className="mt-4 bg-blue-600 hover:bg-blue-700"
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add New Item
+                  </Button>
+                </div>
+              ) : (
+                filteredItems.map((item, index) => (
+                  <div
+                    key={item.id}
+                    className="flex items-start gap-4 px-6 py-5 bg-white border-b border-gray-100 hover:bg-gray-50 cursor-pointer group"
+                    onClick={() => {
+                      setSelectedItem({ ...item });
+                      setEditItemOpen(true);
+                    }}
+                  >
+                    {/* Item Image */}
+                    <div className="w-24 h-24 rounded-lg bg-gray-100 overflow-hidden flex-shrink-0 shadow-sm relative">
+                      {item.image ? (
+                        <img
+                          src={item.image}
+                          alt={item.name}
+                          className={`w-full h-full object-cover ${!item.inStock ? 'opacity-50 grayscale' : ''}`}
+                          loading="lazy"
+                        />
+                      ) : (
+                        <div className={`w-full h-full flex items-center justify-center bg-gradient-to-br from-amber-50 to-orange-100 ${!item.inStock ? 'opacity-50 grayscale' : ''}`}>
+                          <span className="text-4xl">
+                            {item.isVeg !== false ? "🥗" : "🍖"}
+                          </span>
+                        </div>
+                      )}
+                      {!item.inStock && (
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <Badge variant="destructive" className="text-[10px] px-1.5 py-0.5">
+                            Out of Stock
+                          </Badge>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Item Details */}
+                    <div className="flex-1 min-w-0">
+                      {/* Veg/Non-veg indicator */}
+                      <div className="flex items-center gap-2 mb-2">
+                        <span
+                          className={`w-5 h-5 border-2 rounded flex items-center justify-center ${
+                            item.isVeg !== false
+                              ? "border-green-600"
+                              : "border-red-600"
+                          }`}
+                        >
+                          <span
+                            className={`w-2.5 h-2.5 rounded-full ${
+                              item.isVeg !== false ? "bg-green-600" : "bg-red-600"
+                            }`}
+                          ></span>
+                        </span>
+                      </div>
+
+                      {/* Item Name */}
+                      <h3 className="text-sm font-medium text-gray-900 mb-1">
+                        {item.name}
+                      </h3>
+
+                      {/* Price */}
+                      <p className="text-sm font-bold text-gray-900 mb-2">
+                        ₹{item.price}
+                      </p>
+
+                      {/* Tags */}
+                      <div className="flex items-center gap-2 text-xs text-gray-500">
+                        <span className="flex items-center gap-1">
+                          <span className="text-amber-500">🥇</span>
+                          Medium
+                        </span>
+                        <span className="text-gray-300">|</span>
+                        <span>0.00 kcal</span>
+                        <span className="text-gray-300">|</span>
+                        <span>0.00g protein</span>
+                        <ChevronRight className="h-3 w-3 text-gray-400" />
+                      </div>
+
+                      {/* Warning (random for demo) */}
+                      {index < 2 && (
+                        <p className="text-xs text-red-500 mt-2 font-medium">
+                          1 media rejected in moderation
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Actions (visible on hover) */}
+                    <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 w-8 p-0"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          toggleItemStock(item.id);
+                        }}
+                      >
+                        {item.inStock ? (
+                          <Eye className="h-4 w-4 text-gray-500" />
+                        ) : (
+                          <EyeOff className="h-4 w-4 text-gray-500" />
+                        )}
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 w-8 p-0"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          duplicateItem(item);
+                        }}
+                      >
+                        <Copy className="h-4 w-4 text-gray-500" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 w-8 p-0"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          deleteItem(item.id);
+                        }}
+                      >
+                        <Trash2 className="h-4 w-4 text-red-500" />
+                      </Button>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Add Category Dialog */}
+      <Dialog open={addCategoryOpen} onOpenChange={setAddCategoryOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Add New Category</DialogTitle>
+            <DialogDescription>
+              Create a new category to organize your menu items
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-gray-700">Category Name</label>
+              <Input
+                placeholder="e.g., Starters, Main Course"
+                value={newCategoryName}
+                onChange={(e) => setNewCategoryName(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-gray-700">Description (Optional)</label>
+              <Textarea
+                placeholder="Brief description of this category"
+                value={newCategoryDesc}
+                onChange={(e) => setNewCategoryDesc(e.target.value)}
+                rows={3}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setAddCategoryOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={addCategory} className="bg-blue-600 hover:bg-blue-700">
+              Add Category
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Item Dialog */}
+      <Dialog open={addItemOpen} onOpenChange={setAddItemOpen}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Add New Item</DialogTitle>
+            <DialogDescription>
+              Add a new item to {selectedCategoryData?.title || "this category"}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-gray-700">Item Name *</label>
+              <Input
+                placeholder="e.g., Masala Dosa"
+                value={newItemName}
+                onChange={(e) => setNewItemName(e.target.value)}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-700">Price (₹) *</label>
                 <Input
-                  placeholder="Search items by name or category..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-9 rounded-full"
+                  type="number"
+                  placeholder="99"
+                  value={newItemPrice}
+                  onChange={(e) => setNewItemPrice(e.target.value)}
                 />
               </div>
-              
-              <div className="flex items-center gap-3">
-                <Select>
-                  <SelectTrigger className="w-[180px] rounded-full">
-                    <SelectValue placeholder="All Categories" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Categories</SelectItem>
-                    {categories.map((category) => (
-                      <SelectItem key={category.id} value={category.id}>
-                        {category.title}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                
-                <Select>
-                  <SelectTrigger className="w-[140px] rounded-full">
-                    <SelectValue placeholder="All Status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Status</SelectItem>
-                    <SelectItem value="in_stock">In Stock</SelectItem>
-                    <SelectItem value="out_of_stock">Out of Stock</SelectItem>
-                  </SelectContent>
-                </Select>
-                
-                <Button variant="outline" className="rounded-full">
-                  <Filter className="h-4 w-4 mr-2" />
-                  More Filters
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-700">Unit</label>
+                <Input
+                  placeholder="1 plate"
+                  value={newItemUnit}
+                  onChange={(e) => setNewItemUnit(e.target.value)}
+                />
+              </div>
+            </div>
+            <div className="flex items-center justify-between py-2">
+              <div>
+                <p className="text-sm font-medium text-gray-700">Vegetarian</p>
+                <p className="text-xs text-gray-500">Is this item vegetarian?</p>
+              </div>
+              <Switch
+                checked={newItemIsVeg}
+                onCheckedChange={setNewItemIsVeg}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setAddItemOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={addItem}
+              className="bg-blue-600 hover:bg-blue-700"
+              disabled={!newItemName.trim() || !newItemPrice}
+            >
+              Add Item
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Item Sheet */}
+      <Sheet open={editItemOpen} onOpenChange={setEditItemOpen}>
+        <SheetContent className="sm:max-w-lg">
+          <SheetHeader>
+            <SheetTitle>Edit Item</SheetTitle>
+            <SheetDescription>
+              Update item details
+            </SheetDescription>
+          </SheetHeader>
+          {selectedItem && (
+            <div className="space-y-6 py-6">
+              {/* Image Preview */}
+              <div className="w-full h-48 rounded-lg bg-gray-100 overflow-hidden relative">
+                {selectedItem.image ? (
+                  <>
+                    <img
+                      src={selectedItem.image}
+                      alt={selectedItem.name}
+                      className="w-full h-full object-cover"
+                    />
+                    <div className="absolute inset-0 bg-black/40 opacity-0 hover:opacity-100 transition-opacity flex items-center justify-center">
+                      <Button variant="secondary" size="sm">
+                        Change Image
+                      </Button>
+                    </div>
+                  </>
+                ) : (
+                  <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-br from-amber-50 to-orange-100">
+                    <span className="text-6xl mb-2">
+                      {selectedItem.isVeg !== false ? "🥗" : "🍖"}
+                    </span>
+                    <Button variant="outline" size="sm">
+                      Upload Image
+                    </Button>
+                  </div>
+                )}
+              </div>
+
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-gray-700">Item Name</label>
+                  <Input
+                    value={selectedItem.name}
+                    onChange={(e) =>
+                      setSelectedItem({ ...selectedItem, name: e.target.value })
+                    }
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-gray-700">Price (₹)</label>
+                    <Input
+                      type="number"
+                      value={selectedItem.price}
+                      onChange={(e) =>
+                        setSelectedItem({
+                          ...selectedItem,
+                          price: parseFloat(e.target.value) || 0,
+                        })
+                      }
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-gray-700">Unit</label>
+                    <Input
+                      value={selectedItem.unit}
+                      onChange={(e) =>
+                        setSelectedItem({ ...selectedItem, unit: e.target.value })
+                      }
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-gray-700">Category</label>
+                  <Select
+                    value={selectedItem.categoryId}
+                    onValueChange={(value) =>
+                      setSelectedItem({
+                        ...selectedItem,
+                        categoryId: value,
+                        category: categories.find((c) => c.id === value)?.title || "",
+                      })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {categories.map((cat) => (
+                        <SelectItem key={cat.id} value={cat.id}>
+                          {cat.title}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex items-center justify-between py-2">
+                  <div>
+                    <p className="text-sm font-medium text-gray-700">Vegetarian</p>
+                    <p className="text-xs text-gray-500">Is this item vegetarian?</p>
+                  </div>
+                  <Switch
+                    checked={selectedItem.isVeg !== false}
+                    onCheckedChange={(checked) =>
+                      setSelectedItem({ ...selectedItem, isVeg: checked })
+                    }
+                  />
+                </div>
+                <div className="flex items-center justify-between py-2">
+                  <div>
+                    <p className="text-sm font-medium text-gray-700">In Stock</p>
+                    <p className="text-xs text-gray-500">Is this item available?</p>
+                  </div>
+                  <Switch
+                    checked={selectedItem.inStock}
+                    onCheckedChange={(checked) =>
+                      setSelectedItem({ ...selectedItem, inStock: checked })
+                    }
+                  />
+                </div>
+              </div>
+
+              <div className="flex gap-3 pt-4">
+                <Button
+                  variant="outline"
+                  className="flex-1"
+                  onClick={() => {
+                    deleteItem(selectedItem.id);
+                    setEditItemOpen(false);
+                    setSelectedItem(null);
+                  }}
+                >
+                  <Trash2 className="h-4 w-4 mr-2 text-red-500" />
+                  Delete
+                </Button>
+                <Button
+                  className="flex-1 bg-blue-600 hover:bg-blue-700"
+                  onClick={updateItem}
+                >
+                  Save Changes
                 </Button>
               </div>
             </div>
-          </CardContent>
-        </Card>
-
-        {/* Tabs Content */}
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="rounded-full bg-gray-100 p-1 w-fit">
-            <TabsTrigger value="menu" className="rounded-full px-4 py-2">
-              Menu Editor
-            </TabsTrigger>
-            <TabsTrigger value="inventory" className="rounded-full px-4 py-2">
-              Inventory Management
-            </TabsTrigger>
-            <TabsTrigger value="categories" className="rounded-full px-4 py-2">
-              Categories
-            </TabsTrigger>
-          </TabsList>
-
-          {/* Menu Editor Tab */}
-          <TabsContent value="menu" className="space-y-6">
-            {/* Stats Overview */}
-            <div className="grid gap-4 md:grid-cols-4">
-              <Card className="rounded-2xl border border-gray-100 bg-white shadow-[0_2px_8px_rgba(0,0,0,0.05)]">
-                <CardContent className="p-5">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-gray-500">Total Items</p>
-                      <p className="text-2xl font-bold text-gray-900">{inventory.length}</p>
-                    </div>
-                    <Package className="h-10 w-10 text-gray-300" />
-                  </div>
-                </CardContent>
-              </Card>
-              
-              <Card className="rounded-2xl border border-gray-100 bg-white shadow-[0_2px_8px_rgba(0,0,0,0.05)]">
-                <CardContent className="p-5">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-gray-500">In Stock</p>
-                      <p className="text-2xl font-bold text-gray-900">
-                        {inventory.filter(item => item.inStock).length}
-                      </p>
-                    </div>
-                    <div className="h-10 w-10 rounded-full bg-emerald-100 flex items-center justify-center">
-                      <Package className="h-5 w-5 text-emerald-600" />
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-              
-              <Card className="rounded-2xl border border-gray-100 bg-white shadow-[0_2px_8px_rgba(0,0,0,0.05)]">
-                <CardContent className="p-5">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-gray-500">Out of Stock</p>
-                      <p className="text-2xl font-bold text-gray-900">
-                        {inventory.filter(item => !item.inStock).length}
-                      </p>
-                    </div>
-                    <div className="h-10 w-10 rounded-full bg-red-100 flex items-center justify-center">
-                      <Package className="h-5 w-5 text-red-600" />
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-              
-              <Card className="rounded-2xl border border-gray-100 bg-white shadow-[0_2px_8px_rgba(0,0,0,0.05)]">
-                <CardContent className="p-5">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-gray-500">Categories</p>
-                      <p className="text-2xl font-bold text-gray-900">{categories.length}</p>
-                    </div>
-                    <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center">
-                      <Package className="h-5 w-5 text-blue-600" />
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* Menu Items Grid */}
-            <Card className="rounded-2xl border border-gray-100 bg-white shadow-[0_2px_8px_rgba(0,0,0,0.05)]">
-              <CardHeader>
-                <CardTitle>Menu Items</CardTitle>
-                <CardDescription>
-                  Manage and organize your menu items
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                  {filteredMenuItems.map((item) => (
-                    <Card 
-                      key={item.id} 
-                      className="rounded-2xl border border-gray-100 bg-white shadow-[0_2px_8px_rgba(0,0,0,0.05)] hover:shadow-md transition-shadow"
-                    >
-                      <CardContent className="p-4">
-                        <div className="space-y-3">
-                          <div className="flex items-start justify-between">
-                            <div>
-                              <Badge className="rounded-full text-xs bg-gray-100 text-gray-700 mb-2">
-                                {item.category}
-                              </Badge>
-                              <h3 className="font-semibold text-gray-900">{item.name}</h3>
-                              <p className="text-sm text-gray-500">{item.unit}</p>
-                            </div>
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="icon" className="h-8 w-8">
-                                  <MoreVertical className="h-4 w-4" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end" className="w-48">
-                                <DropdownMenuItem>
-                                  <Eye className="h-4 w-4 mr-2" />
-                                  View Details
-                                </DropdownMenuItem>
-                                <DropdownMenuItem>
-                                  <Edit2 className="h-4 w-4 mr-2" />
-                                  Edit Item
-                                </DropdownMenuItem>
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem className="text-red-600">
-                                  <Trash2 className="h-4 w-4 mr-2" />
-                                  Delete Item
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          </div>
-                          
-                          <div className="flex items-center justify-between">
-                            <div>
-                              <p className="text-lg font-bold text-gray-900">₹{item.price}</p>
-                              <div className="flex items-center gap-2 mt-1">
-                                <Switch 
-                                  checked={item.inStock}
-                                  onCheckedChange={(checked) =>
-                                    setStockState((prev) => ({
-                                      ...prev,
-                                      [item.id]: checked,
-                                    }))
-                                  }
-                                />
-                                <span className="text-xs text-gray-500">
-                                  {item.inStock ? "In Stock" : "Out of Stock"}
-                                </span>
-                              </div>
-                            </div>
-                            
-                            <div className={`h-12 w-12 rounded-lg ${
-                              item.inStock ? 'bg-emerald-50' : 'bg-gray-100'
-                            } flex items-center justify-center`}>
-                              {item.image ? (
-                                <img 
-                                  src={item.image} 
-                                  alt={item.name}
-                                  className="h-full w-full rounded-lg object-cover"
-                                />
-                              ) : (
-                                <Package className={`h-6 w-6 ${
-                                  item.inStock ? 'text-emerald-600' : 'text-gray-400'
-                                }`} />
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          {/* Inventory Management Tab */}
-          <TabsContent value="inventory" className="space-y-6">
-            <Card className="rounded-2xl border border-gray-100 bg-white shadow-[0_2px_8px_rgba(0,0,0,0.05)]">
-              <CardHeader>
-                <CardTitle>Inventory Management</CardTitle>
-                <CardDescription>
-                  Update stock status and prices in bulk
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="text-xs font-medium text-gray-500 uppercase tracking-wide">Item</TableHead>
-                      <TableHead className="text-xs font-medium text-gray-500 uppercase tracking-wide">Category</TableHead>
-                      <TableHead className="text-xs font-medium text-gray-500 uppercase tracking-wide">Price</TableHead>
-                      <TableHead className="text-xs font-medium text-gray-500 uppercase tracking-wide">Stock</TableHead>
-                      <TableHead className="text-xs font-medium text-gray-500 uppercase tracking-wide">Status</TableHead>
-                      <TableHead className="text-xs font-medium text-gray-500 uppercase tracking-wide">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {inventory.map((item) => (
-                      <TableRow key={item.id} className="hover:bg-gray-50">
-                        <TableCell>
-                          <div className="flex items-center gap-3">
-                            <div className="h-10 w-10 rounded-lg bg-gray-100 flex items-center justify-center flex-shrink-0">
-                              {item.image ? (
-                                <img 
-                                  src={item.image} 
-                                  alt={item.name}
-                                  className="h-full w-full rounded-lg object-cover"
-                                />
-                              ) : (
-                                <Package className="h-5 w-5 text-gray-400" />
-                              )}
-                            </div>
-                            <div>
-                              <p className="font-medium text-gray-900">{item.name}</p>
-                              <p className="text-xs text-gray-500">{item.unit}</p>
-                            </div>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <Badge className="rounded-full bg-gray-100 text-gray-700">
-                            {item.category}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            <Input
-                              type="number"
-                              value={prices[item.id]}
-                              onChange={(e) =>
-                                setPrices((prev) => ({
-                                  ...prev,
-                                  [item.id]: Number(e.target.value),
-                                }))
-                              }
-                              className="h-8 w-24 text-sm"
-                            />
-                            <span className="text-sm text-gray-500">₹</span>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            <Switch
-                              checked={stockState[item.id]}
-                              onCheckedChange={(checked) =>
-                                setStockState((prev) => ({
-                                  ...prev,
-                                  [item.id]: checked,
-                                }))
-                              }
-                            />
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <Badge className={`rounded-full ${
-                            stockState[item.id]
-                              ? "bg-emerald-50 text-emerald-700"
-                              : "bg-red-50 text-red-700"
-                          }`}>
-                            {stockState[item.id] ? "In Stock" : "Out of Stock"}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-1">
-                            <Button variant="ghost" size="icon" className="h-8 w-8">
-                              <Edit2 className="h-4 w-4" />
-                            </Button>
-                            <Button variant="ghost" size="icon" className="h-8 w-8">
-                              <Trash2 className="h-4 w-4 text-red-500" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          {/* Categories Tab */}
-          <TabsContent value="categories" className="space-y-6">
-            <Card className="rounded-2xl border border-gray-100 bg-white shadow-[0_2px_8px_rgba(0,0,0,0.05)]">
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle>Categories</CardTitle>
-                    <CardDescription>
-                      Organize your menu items into categories
-                    </CardDescription>
-                  </div>
-                  <Button className="rounded-full">
-                    <Plus className="h-4 w-4 mr-2" />
-                    Add Category
-                  </Button>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                  {groupedByCategory.map((category) => (
-                    <Card 
-                      key={category.id}
-                      className="rounded-2xl border border-gray-100 bg-white shadow-[0_2px_8px_rgba(0,0,0,0.05)] hover:shadow-md transition-shadow"
-                    >
-                      <CardContent className="p-5">
-                        <div className="space-y-3">
-                          <div className="flex items-start justify-between">
-                            <div>
-                              <h3 className="font-semibold text-gray-900">{category.title}</h3>
-                              <p className="text-sm text-gray-500 mt-1">{category.description}</p>
-                            </div>
-                            <Badge className="rounded-full bg-gray-100 text-gray-700">
-                              {category.items.length} items
-                            </Badge>
-                          </div>
-                          
-                          <div className="flex items-center justify-between pt-2">
-                            <Button variant="outline" size="sm" className="rounded-full">
-                              <Edit2 className="h-4 w-4 mr-2" />
-                              Edit
-                            </Button>
-                            <Button variant="outline" size="sm" className="rounded-full text-red-600 hover:text-red-700">
-                              <Trash2 className="h-4 w-4 mr-2" />
-                              Delete
-                            </Button>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
-      </div>
+          )}
+        </SheetContent>
+      </Sheet>
     </AppShell>
   );
 }

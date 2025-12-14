@@ -5,23 +5,27 @@ import { usePathname } from "next/navigation";
 import {
   BarChart3,
   HelpCircle,
-  LayoutPanelLeft,
   MessageSquare,
   ScrollText,
   ShoppingBasket,
   Wallet,
-  Home,
   Settings,
   LogOut,
-  ChevronRight,
+  Clock,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { orders } from "@/data/orders";
+
+// Calculate preparing orders count dynamically
+const getPreparingCount = () => {
+  return orders.filter((order) => order.status === "preparing").length;
+};
 
 const NAV_ITEMS = [
-  { label: "Orders", href: "/orders", icon: ScrollText, badge: 3 },
+  { label: "Orders", href: "/orders", icon: ScrollText, badge: getPreparingCount() },
   { label: "Menu & Inventory", href: "/menu", icon: ShoppingBasket },
   { label: "Reports", href: "/reports", icon: BarChart3 },
-  { label: "Reviews", href: "/reviews", icon: MessageSquare, badge: 12 },
+  { label: "Reviews", href: "/reviews", icon: MessageSquare },
   { label: "Finance", href: "/finance", icon: Wallet },
   { label: "Help Center", href: "/help", icon: HelpCircle },
 ];
@@ -71,11 +75,11 @@ export function Sidebar() {
               </div>
               
               <div className="flex items-center gap-2">
-                {item.badge && (
+                {item.badge !== undefined && item.badge > 0 && (
                   <Badge className={`rounded-full text-xs px-1.5 py-0.5 min-w-5 ${
                     isActive 
                       ? "bg-blue-500 text-white" 
-                      : "bg-gray-700 text-gray-300"
+                      : "bg-orange-500 text-white"
                   }`}>
                     {item.badge}
                   </Badge>
